@@ -15,21 +15,21 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Privacy provider for block_catquizstatistics.
+ * Privacy provider for block_catquiz_statistics.
  *
  * Phase 1 / MVP: this plugin does not store personal data of its own.
  * It reads from tables owned by local_catquiz and the Moodle question
  * engine; those plugins handle export and deletion for their own data.
  *
- * Phase 3 (Module d – learning activity archival) will add own tables
+ * Phase 3 (Learning Activity – learning activity archival) will add own tables
  * and upgrade this provider to implement plugin\provider as well.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\privacy;
+namespace block_catquiz_statistics\privacy;
 
 use core_privacy\local\metadata\collection;
 
@@ -39,7 +39,6 @@ use core_privacy\local\metadata\collection;
  * Documents which external tables are read; no own personal data is stored.
  */
 class provider implements \core_privacy\local\metadata\provider {
-
     /**
      * Describe all personal data this plugin accesses.
      *
@@ -47,7 +46,6 @@ class provider implements \core_privacy\local\metadata\provider {
      * @return collection
      */
     public static function get_metadata(collection $collection): collection {
-
         // Attempt data: userid, personability, status, teststrategy, JSON payload.
         $collection->add_database_table(
             'local_catquiz_attempts',

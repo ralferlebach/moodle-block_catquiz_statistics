@@ -1,5 +1,5 @@
 ##############################################################################
-# GitHub Actions Release CI – block_catquizstatistics
+# GitHub Actions Release CI – block_catquiz_statistics
 #
 # Triggered on push / PR to main.
 # Provides the "CI complete" status check for branch protection.
@@ -149,7 +149,7 @@ jobs:
         run: |
           moodle-plugin-ci behat \
             --profile chrome \
-            --tags "@block_catquizstatistics&&~@broken" \
+            --tags "@block_catquiz_statistics&&~@broken" \
             --start-servers
 
   ci-complete:

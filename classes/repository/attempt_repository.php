@@ -26,24 +26,23 @@
  * All other classes (reports, exporters, statistics) receive typed DTOs
  * from this repository and never touch raw DB records or raw JSON.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\repository;
+namespace block_catquiz_statistics\repository;
 
-use block_catquizstatistics\dto\attempt_data;
+use block_catquiz_statistics\dto\attempt_data;
 
 /**
  * Repository for CAT quiz attempt data.
  */
 class attempt_repository {
-
     /**
      * Check that all tables and columns this plugin depends on actually exist.
      *
-     * Call once per page load; return false → show a graceful degradation
+     * Call once per page load; return false to show a graceful degradation
      * message rather than DB errors.
      *
      * @return bool True when schema is compatible.
@@ -65,7 +64,6 @@ class attempt_repository {
             }
         }
 
-        // Verify critical columns that we parse from the JSON blob.
         $attempttable = new \xmldb_table('local_catquiz_attempts');
         foreach (['json', 'debug_info', 'instanceid', 'contextid', 'scaleid'] as $col) {
             if (!$dbman->field_exists($attempttable, $col)) {
@@ -78,44 +76,48 @@ class attempt_repository {
     /**
      * Return all mod_adaptivequiz instances that use catquiz in a course.
      *
+     * Stub — returns empty array until Phase 1 implementation.
+     *
      * @param int $courseid Course ID.
      * @return array Array of stdClass with fields: instanceid, name, catscaleid, catscalename, attemptcount.
      */
     public function get_catquiz_instances_for_course(int $courseid): array {
-        // TODO Phase 1: implement query against local_catquiz_tests JOIN local_catquiz_catscales.
         return [];
     }
 
     /**
      * Return attempt rows matching the filter, hydrated as attempt_data DTOs.
      *
+     * Stub — returns empty array until Phase 1 implementation.
+     *
      * @param attempt_filter $filter Query scope.
      * @return attempt_data[]
      */
     public function get_attempts(attempt_filter $filter): array {
-        // TODO Phase 1: build SELECT with dynamic WHERE clauses and return hydrated DTOs.
         return [];
     }
 
     /**
      * Return a single attempt including full JSON and graphicalsummary parsing.
      *
+     * Stub — not yet implemented.
+     *
      * @param int $attemptid local_catquiz_attempts.id (not adaptivequiz_attempt.id).
      * @return attempt_data|null
      */
     public function get_attempt_with_detail(int $attemptid): ?attempt_data {
-        // TODO Phase 1.
         return null;
     }
 
     /**
      * Return person-parameter rows (ability, SE per scale) for a filter scope.
      *
+     * Stub — not yet implemented.
+     *
      * @param attempt_filter $filter Query scope.
      * @return array Array of stdClass with fields: userid, catscaleid, ability, standarderror.
      */
     public function get_personparams(attempt_filter $filter): array {
-        // TODO Phase 1.
         return [];
     }
 
@@ -124,27 +126,26 @@ class attempt_repository {
      *
      * Join path:
      *   adaptivequiz_attempt.uniqueid
-     *   → question_attempts.questionusageid
-     *   → question_attempt_steps.questionattemptid   (fraction, timecreated)
-     *   → question_attempt_step_data.attemptstepid   (name, value – response options)
-     *   → question_attempts.questionid               (joined for rightanswer, responsesummary)
+     *   -> question_attempts.questionusageid
+     *   -> question_attempt_steps.questionattemptid   (fraction, timecreated)
+     *   -> question_attempt_step_data.attemptstepid   (name, value – response options)
+     *   -> question_attempts.questionid               (joined for rightanswer, responsesummary)
      *
-     * Requires setting block_catquizstatistics/enableqejoin = 1.
+     * Requires setting block_catquiz_statistics/enableqejoin = 1.
+     *
+     * Stub — not yet implemented.
      *
      * @param int $adaptiveattemptid adaptivequiz_attempt.id value.
      * @return array Ordered array of step objects.
      */
     public function get_question_steps_for_attempt(int $adaptiveattemptid): array {
-        // TODO Phase 2 (Modules c / e).
         return [];
     }
-
-    // ── Internal JSON parsing ──────────────────────────────────────────────
 
     /**
      * Defensively decode attempts.json into an object.
      *
-     * Returns null (and emits a developer debug notice) on any parse failure
+     * Returns null and emits a developer debug notice on any parse failure
      * so callers can handle missing data gracefully.
      *
      * @param string|null $json Raw JSON string from local_catquiz_attempts.json.
@@ -157,7 +158,7 @@ class attempt_repository {
         $decoded = json_decode($json);
         if (json_last_error() !== JSON_ERROR_NONE || !is_object($decoded)) {
             debugging(
-                'block_catquizstatistics: attempt json parse error: ' . json_last_error_msg(),
+                'block_catquiz_statistics: attempt json parse error: ' . json_last_error_msg(),
                 DEBUG_DEVELOPER
             );
             return null;
@@ -190,18 +191,15 @@ class attempt_repository {
             if (!is_object($entry)) {
                 continue;
             }
-            // Normalise defensively: every key is optional.
             $steps[] = (object) [
-                'id'                => $entry->id ?? null,
-                'questionname'      => $entry->questionname ?? '',
-                'lastresponse'      => isset($entry->lastresponse) ? (float) $entry->lastresponse : null,
-                'difficulty'        => isset($entry->difficulty)   ? (float) $entry->difficulty   : null,
-                'questionscale'     => $entry->questionscale ?? null,
-                'questionscale_name' => $entry->questionscale_name ?? '',
-                'fisherinformation' => isset($entry->fisherinformation)
-                    ? (float) $entry->fisherinformation : null,
-                'personability_after' => isset($entry->personability_after)
-                    ? (float) $entry->personability_after : null,
+                'id'               => $entry->id ?? null,
+                'questionname'     => $entry->questionname ?? '',
+                'lastresponse'     => isset($entry->lastresponse) ? (float) $entry->lastresponse : null,
+                'difficulty'       => isset($entry->difficulty) ? (float) $entry->difficulty : null,
+                'questionscale'    => $entry->questionscale ?? null,
+                'questionscalename' => $entry->questionscale_name ?? '',
+                'fisherinformation' => isset($entry->fisherinformation) ? (float) $entry->fisherinformation : null,
+                'personabilityafter' => isset($entry->personability_after) ? (float) $entry->personability_after : null,
             ];
         }
         return $steps;

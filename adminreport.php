@@ -15,13 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * System-wide statistics report page for block_catquizstatistics.
+ * System-wide statistics report page for block_catquiz_statistics.
  *
- * Restricted to users holding block/catquizstatistics:viewall at system
+ * Restricted to users holding block/catquiz_statistics:viewall at system
  * context AND local/catquiz:canmanage.  Intended for CAT managers who need
- * cross-course item analysis (Module e) or site-wide aggregations.
+ * cross-course item analysis (Item & Response Analysis) or site-wide aggregations.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -29,28 +29,28 @@
 require_once('../../config.php');
 
 require_login();
-\block_catquizstatistics\access::require_viewall();
+\block_catquiz_statistics\access::require_viewall();
 
 $systemcontext = context_system::instance();
 
 $PAGE->set_context($systemcontext);
-$PAGE->set_url(new moodle_url('/blocks/catquizstatistics/adminreport.php'));
-$PAGE->set_title(get_string('adminreporttitle', 'block_catquizstatistics'));
-$PAGE->set_heading(get_string('adminreporttitle', 'block_catquizstatistics'));
+$PAGE->set_url(new moodle_url('/blocks/catquiz_statistics/adminreport.php'));
+$PAGE->set_title(get_string('adminreporttitle', 'block_catquiz_statistics'));
+$PAGE->set_heading(get_string('adminreporttitle', 'block_catquiz_statistics'));
 $PAGE->set_pagelayout('admin');
-$PAGE->navbar->add(get_string('adminreporttitle', 'block_catquizstatistics'));
+$PAGE->navbar->add(get_string('adminreporttitle', 'block_catquiz_statistics'));
 
 echo $OUTPUT->header();
 
-$reportpage = new \block_catquizstatistics\output\report_page(
+$reportpage = new \block_catquiz_statistics\output\report_page(
     courseid: 0,
-    heading: get_string('adminreporttitle', 'block_catquizstatistics'),
-    comingsoon: get_string('adminreport:comingsoon', 'block_catquizstatistics'),
+    heading: get_string('adminreporttitle', 'block_catquiz_statistics'),
+    comingsoon: get_string('adminreport:comingsoon', 'block_catquiz_statistics'),
     issystemwide: true,
 );
 
 echo $OUTPUT->render_from_template(
-    'block_catquizstatistics/report_page',
+    'block_catquiz_statistics/report_page',
     $reportpage->export_for_template($OUTPUT)
 );
 

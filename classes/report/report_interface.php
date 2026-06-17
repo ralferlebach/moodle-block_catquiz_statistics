@@ -21,20 +21,19 @@
  * the report page renderer, and future UI components can work against a
  * stable API regardless of which module they are handling.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\report;
+namespace block_catquiz_statistics\report;
 
-use block_catquizstatistics\repository\attempt_filter;
+use block_catquiz_statistics\repository\attempt_filter;
 
 /**
  * Report module interface.
  */
 interface report_interface {
-
     /**
      * Module identifier used in URLs and export filenames ('a', 'b', 'c', 'd', 'e').
      *

@@ -1,4 +1,4 @@
-## Session-Ende – block_catquizstatistics · Session [NR]
+## Session-Ende – block_catquiz_statistics · Session [NR]
 
 **Datum:** [DATUM]
 **Dauer:** ca. [X] Minuten

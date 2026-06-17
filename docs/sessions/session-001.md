@@ -12,7 +12,7 @@ Admin-Einstieg stellt.
 - Analyse der hochgeladenen `local_catquiz_moodle45_2024120500.zip`
 - Analyse des Referenz-Plugins `block_coursectrldates` (Ralf Erlebach)
 - Alle Architektur- und Entwurfsentscheidungen getroffen (s.u.)
-- Vollständiger Stub v0.1 erstellt (45 Dateien, ZIP: block_catquizstatistics_stub_v0.1.zip)
+- Vollständiger Stub v0.1 erstellt (45 Dateien, ZIP: block_catquiz_statistics_stub_v0.1.zip)
 
 ---
 
@@ -43,11 +43,11 @@ Admin-Einstieg stellt.
 - Adhoc-Task für große/systemweite Exports
 
 ### Statistikmodule
-- Modul a: Testergebnisse (Phase 1)
-- Modul b: Testnutzung + RCI (Phase 2)
-- Modul c: Testverlauf (Phase 2)
-- Modul d: Lernangebotsnutzung (Phase 3, opt-in, Datenschutz)
-- Modul e: Item- und Antwortanalyse (Phase 3)
+- Testergebnisse: Testergebnisse (Phase 1)
+- Testnutzung: Testnutzung + RCI (Phase 2)
+- Testverlauf: Testverlauf (Phase 2)
+- Lernangebotsnutzung: Lernangebotsnutzung (Phase 3, opt-in, Datenschutz)
+- Item- und Antwortanalyse: Item- und Antwortanalyse (Phase 3)
 
 ### CI
 - `moodle-ci.yml`: non-main, 4 Jobs + Gate, Moodle 4.5 + 5.0, PHP 8.1/8.2/8.3
@@ -60,7 +60,7 @@ Admin-Einstieg stellt.
 ## Erstellte Dateien (v0.1 Stub)
 
 ### Root
-`version.php`, `block_catquizstatistics.php`, `report.php`, `adminreport.php`,
+`version.php`, `block_catquiz_statistics.php`, `report.php`, `adminreport.php`,
 `settings.php`, `styles.css`, `CHANGELOG.md`, `makefile`, `phpunit.xml`,
 `.gitignore`, `.gitattributes`, `.phpcsignore`
 
@@ -68,7 +68,7 @@ Admin-Einstieg stellt.
 `db/access.php`
 
 ### lang/
-`lang/en/block_catquizstatistics.php`, `lang/de/block_catquizstatistics.php`
+`lang/en/block_catquiz_statistics.php`, `lang/de/block_catquiz_statistics.php`
 
 ### classes/
 `classes/access.php`, `classes/privacy/provider.php`,
@@ -84,7 +84,7 @@ Admin-Einstieg stellt.
 
 ### tests/
 `tests/generator/lib.php`,
-`tests/behat/behat_block_catquizstatistics.php`,
+`tests/behat/behat_block_catquiz_statistics.php`,
 `tests/behat/block_visibility.feature`, `tests/behat/report_access.feature`,
 `tests/repository/attempt_repository_test.php`,
 `tests/export/attempt_results_exporter_test.php`
@@ -138,8 +138,8 @@ Aktueller Entwicklungsstand:
   11 PHPUnit-Tests (Stub-Level) grün. Kein CI-Lauf noch durchgeführt.
 
 Zuletzt abgeschlossen:
-  Vollständiger Stub v0.1 (47 Dateien, ZIP: block_catquizstatistics_stub_v0.1.zip)
+  Vollständiger Stub v0.1 (47 Dateien, ZIP: block_catquiz_statistics_stub_v0.1.zip)
 
 Als nächstes geplant:
-  Phase 1: attempt_repository::get_attempts() + Modul a Daten
+  Phase 1: attempt_repository::get_attempts() + Testergebnisse Daten
 ```

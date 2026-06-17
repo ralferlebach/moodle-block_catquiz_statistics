@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<ruleset name="block_catquiz_statistics">
+    <description>PHPCS configuration for block_catquiz_statistics.</description>
+    <rule ref="moodle"/>
+    <exclude-pattern>*/tools/*</exclude-pattern>
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+</ruleset>

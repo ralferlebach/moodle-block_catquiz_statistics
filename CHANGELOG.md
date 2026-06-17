@@ -1,4 +1,4 @@
-# Changelog — block_catquizstatistics
+# Changelog — block_catquiz_statistics
 
 All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/);
@@ -10,7 +10,8 @@ versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Initial plugin stub: installs, upgrades, uninstalls cleanly on Moodle 4.5.
-- Block renders report link for editing teachers and managers (`view` capability).
+- `lib.php` navigation callback: adds a link to the course "Berichte" (Reports) tab
+  when the block is present or an adaptive quiz instance exists in the course.
 - Empty course-level report page (`report.php`, requires `viewdetails`).
 - Empty system-wide admin report page (`adminreport.php`, requires `viewall`).
 - Seven-capability access model: `addinstance`, `myaddinstance`, `view`,
@@ -24,8 +25,8 @@ versioning follows [Semantic Versioning](https://semver.org/).
 - Immutable filter value object (`attempt_filter`) with `from_request()` factory.
 - `attempt_data` DTO covering all structured columns, parsed JSON fields,
   `graphicalsummary_data`, and computed fields.
-- Report interface (`report_interface`) and Module a stub (`attempt_results_report`).
-- Export base class and factory; Module a exporter stub; adhoc task skeleton.
+- Report interface (`report_interface`) and Test Results stub (`attempt_results_report`).
+- Export base class and factory; Test Results exporter stub; adhoc task skeleton.
 - Response normaliser stub (qtype-aware, order-independent — Phase 2 TODOs).
 - Mustache templates: `block_main`, `report_page`.
 - English and German language strings for all capabilities, settings, and modules.
@@ -37,12 +38,12 @@ versioning follows [Semantic Versioning](https://semver.org/).
   `moodle-release.yml` (main branch, full matrix with `--fail-on-warning`).
 
 ### Not yet implemented (planned)
-- Module a data: attempt rows, aggregate stats, SE validity check.
+- Test Results data: attempt rows, aggregate stats, SE validity check.
 - Multi-sheet XLSX/ODS writer (8 named sheets).
-- Module b: Test Usage / Reliable Change Index.
-- Module c: Test Progress (graphicalsummary_data + QE join).
-- Module d: Learning Activity log archival (opt-in, privacy review required).
-- Module e: Item & Response Analysis (QE join, distractor frequency table).
+- Test Usage: Test Usage / Reliable Change Index.
+- Test Progress: Test Progress (graphicalsummary_data + QE join).
+- Learning Activity: Learning Activity log archival (opt-in, privacy review required).
+- Item & Response Analysis: Item & Response Analysis (QE join, distractor frequency table).
 - Response normaliser adapters for multichoice, match, ddwtos, cloze.
 - Ad-hoc task execution (large/system-wide exports).
 - AMD JavaScript (interactive filters, chart rendering).

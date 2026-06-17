@@ -15,9 +15,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Admin settings for block_catquizstatistics.
+ * Admin settings for block_catquiz_statistics.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -25,12 +25,11 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($ADMIN->fulltree) {
-
     // Default export format.
     $settings->add(new admin_setting_configselect(
-        'block_catquizstatistics/defaultformat',
-        get_string('setting:defaultformat', 'block_catquizstatistics'),
-        get_string('setting:defaultformat_desc', 'block_catquizstatistics'),
+        'block_catquiz_statistics/defaultformat',
+        get_string('setting:defaultformat', 'block_catquiz_statistics'),
+        get_string('setting:defaultformat_desc', 'block_catquiz_statistics'),
         'csv',
         [
             'csv'   => 'CSV',
@@ -42,26 +41,26 @@ if ($ADMIN->fulltree) {
 
     // Multi-sheet workbook size limit.
     $settings->add(new admin_setting_configtext(
-        'block_catquizstatistics/maxsheets',
-        get_string('setting:maxsheets', 'block_catquizstatistics'),
-        get_string('setting:maxsheets_desc', 'block_catquizstatistics'),
+        'block_catquiz_statistics/maxsheets',
+        get_string('setting:maxsheets', 'block_catquiz_statistics'),
+        get_string('setting:maxsheets_desc', 'block_catquiz_statistics'),
         50,
         PARAM_INT
     ));
 
-    // Question Engine join toggle (for Modules c/e).
+    // Question Engine join toggle (for Test Progress and Item & Response Analysis).
     $settings->add(new admin_setting_configcheckbox(
-        'block_catquizstatistics/enableqejoin',
-        get_string('setting:enableqejoin', 'block_catquizstatistics'),
-        get_string('setting:enableqejoin_desc', 'block_catquizstatistics'),
+        'block_catquiz_statistics/enableqejoin',
+        get_string('setting:enableqejoin', 'block_catquiz_statistics'),
+        get_string('setting:enableqejoin_desc', 'block_catquiz_statistics'),
         1
     ));
 
-    // Module d: log archival — disabled by default; requires data protection justification.
+    // Learning Activity: log archival — disabled by default; requires data protection justification.
     $settings->add(new admin_setting_configcheckbox(
-        'block_catquizstatistics/enablemoduled',
-        get_string('setting:enablemoduled', 'block_catquizstatistics'),
-        get_string('setting:enablemoduled_desc', 'block_catquizstatistics'),
+        'block_catquiz_statistics/enablemoduled',
+        get_string('setting:enablemoduled', 'block_catquiz_statistics'),
+        get_string('setting:enablemoduled_desc', 'block_catquiz_statistics'),
         0
     ));
 }

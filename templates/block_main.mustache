@@ -1,5 +1,5 @@
 {{!
-    @template block_catquizstatistics/block_main
+    @template block_catquiz_statistics/block_main
 
     CAT Quiz Statistics block widget.
 
@@ -17,7 +17,7 @@
     Example context (json):
     {
         "courseid": 42,
-        "reporturl": "/blocks/catquizstatistics/report.php?courseid=42",
+        "reporturl": "/blocks/catquiz_statistics/report.php?courseid=42",
         "hascatquiz": true,
         "nocatquizmessage": "",
         "canviewall": false,
@@ -25,13 +25,13 @@
     }
 }}
 {{#hascatquiz}}
-<div class="block-catquizstatistics-widget">
+<div class="block-catquiz-statistics-widget">
     <a href="{{{reporturl}}}" class="btn btn-sm btn-primary d-block mb-1">
-        {{#str}}viewreport, block_catquizstatistics{{/str}}
+        {{#str}}viewreport, block_catquiz_statistics{{/str}}
     </a>
     {{#canviewall}}
     <a href="{{{adminreporturl}}}" class="btn btn-sm btn-secondary d-block">
-        {{#str}}viewadminreport, block_catquizstatistics{{/str}}
+        {{#str}}viewadminreport, block_catquiz_statistics{{/str}}
     </a>
     {{/canviewall}}
 </div>

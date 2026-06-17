@@ -17,24 +17,23 @@
 /**
  * PHPUnit tests for exporter_factory and base_exporter.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\export;
+namespace block_catquiz_statistics\export;
 
 use advanced_testcase;
-use block_catquizstatistics\repository\attempt_repository;
+use block_catquiz_statistics\repository\attempt_repository;
 
 /**
  * Tests for the export layer.
  *
- * @covers \block_catquizstatistics\export\exporter_factory
- * @covers \block_catquizstatistics\export\base_exporter
+ * @covers \block_catquiz_statistics\export\exporter_factory
+ * @covers \block_catquiz_statistics\export\base_exporter
  */
 final class attempt_results_exporter_test extends advanced_testcase {
-
     /**
      * Factory creates a valid report object for module a.
      *
@@ -44,7 +43,7 @@ final class attempt_results_exporter_test extends advanced_testcase {
         $repo   = new attempt_repository();
         $report = exporter_factory::create_report('a', $repo);
         $this->assertSame('a', $report->get_module_id());
-        $this->assertInstanceOf(\block_catquizstatistics\report\report_interface::class, $report);
+        $this->assertInstanceOf(\block_catquiz_statistics\report\report_interface::class, $report);
     }
 
     /**
@@ -58,26 +57,26 @@ final class attempt_results_exporter_test extends advanced_testcase {
     }
 
     /**
-     * Module a stub: get_flat_rows returns empty array.
+     * Test Results stub: get_flat_rows returns empty array.
      *
      * @return void
      */
     public function test_module_a_stub_get_flat_rows_returns_empty(): void {
         $repo   = new attempt_repository();
         $report = exporter_factory::create_report('a', $repo);
-        $filter = new \block_catquizstatistics\repository\attempt_filter(courseid: 1);
+        $filter = new \block_catquiz_statistics\repository\attempt_filter(courseid: 1);
         $this->assertSame([], $report->get_flat_rows($filter));
     }
 
     /**
-     * Module a stub: get_aggregate_stats returns empty array.
+     * Test Results stub: get_aggregate_stats returns empty array.
      *
      * @return void
      */
     public function test_module_a_stub_get_aggregate_stats_returns_empty(): void {
         $repo   = new attempt_repository();
         $report = exporter_factory::create_report('a', $repo);
-        $filter = new \block_catquizstatistics\repository\attempt_filter(courseid: 1);
+        $filter = new \block_catquiz_statistics\repository\attempt_filter(courseid: 1);
         $this->assertSame([], $report->get_aggregate_stats($filter));
     }
 }

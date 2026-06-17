@@ -15,9 +15,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Custom Behat step definitions for block_catquizstatistics.
+ * Custom Behat step definitions for block_catquiz_statistics.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @category   test
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -28,16 +28,15 @@
 use Behat\Mink\Exception\ExpectationException;
 
 /**
- * Step definitions for block_catquizstatistics.
+ * Step definitions for block_catquiz_statistics.
  */
-class behat_block_catquizstatistics extends behat_base {
-
+class behat_block_catquiz_statistics extends behat_base {
     /**
-     * Add the catquizstatistics block to a course programmatically.
+     * Add the catquiz_statistics block to a course programmatically.
      *
      * Faster than driving the block-drawer through the UI.
      *
-     * @Given the catquizstatistics block is added to the :shortname course
+     * @Given the catquiz_statistics block is added to the :shortname course
      * @param string $shortname Course shortname.
      * @return void
      */
@@ -47,15 +46,16 @@ class behat_block_catquizstatistics extends behat_base {
         $course  = $DB->get_record('course', ['shortname' => $shortname], '*', MUST_EXIST);
         $context = context_course::instance($course->id);
 
-        if ($DB->record_exists(
+        $alreadyexists = $DB->record_exists(
             'block_instances',
-            ['blockname' => 'catquizstatistics', 'parentcontextid' => $context->id]
-        )) {
+            ['blockname' => 'catquiz_statistics', 'parentcontextid' => $context->id]
+        );
+        if ($alreadyexists) {
             return;
         }
 
         $DB->insert_record('block_instances', (object) [
-            'blockname'         => 'catquizstatistics',
+            'blockname'         => 'catquiz_statistics',
             'parentcontextid'   => $context->id,
             'showinsubcontexts' => 0,
             'pagetypepattern'   => 'course-view-*',
@@ -70,30 +70,32 @@ class behat_block_catquizstatistics extends behat_base {
     }
 
     /**
-     * Assert that the catquizstatistics block report link is visible.
+     * Assert that the catquiz_statistics block report link is visible.
      *
-     * @Then the catquizstatistics report link should be visible
+     * @Then the catquiz_statistics report link should be visible
      * @return void
      */
     public function the_report_link_should_be_visible(): void {
-        $this->find('css', '.block-catquizstatistics-widget a');
+        $this->find('css', '.block-catquiz-statistics-widget a');
     }
 
     /**
-     * Assert that the catquizstatistics block report link is not visible.
+     * Assert that the catquiz_statistics block report link is not visible.
      *
-     * @Then the catquizstatistics report link should not be visible
+     * @Then the catquiz_statistics report link should not be visible
      * @return void
      */
     public function the_report_link_should_not_be_visible(): void {
         try {
-            $this->find('css', '.block-catquizstatistics-widget');
-            throw new ExpectationException(
-                'catquizstatistics report link is visible but should not be.',
-                $this->getSession()
-            );
+            $node = $this->find('css', '.block-catquiz-statistics-widget');
+            if ($node) {
+                throw new ExpectationException(
+                    'catquiz_statistics report link is visible but should not be.',
+                    $this->getSession()
+                );
+            }
         } catch (\Behat\Mink\Exception\ElementNotFoundException $e) {
-            // Expected — element is absent.
+            unset($e); // Expected: element is absent, assertion passes.
         }
     }
 }

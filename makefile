@@ -1,4 +1,4 @@
-# Makefile for block_catquizstatistics
+# Makefile for block_catquiz_statistics
 # Mirrors the moodle-plugin-ci check suite used in GitHub Actions.
 #
 # Targets:
@@ -22,12 +22,20 @@
 #
 # Tests:
 #   make phpunit      — PHPUnit testsuite for this plugin
+#
+# Paths are auto-detected from the makefile's own location.
+# The plugin lives at <MOODLE_ROOT>/blocks/catquiz_statistics/ — always two
+# levels below the Moodle root — so both PLUGIN_DIR and MOODLE_ROOT are
+# derived automatically and work on any installation.
+# Override on the command line if necessary:
+#   make lint-php MOODLE_ROOT=/opt/moodle
 
-MOODLE_ROOT   ?= /var/www/html/moodle45
-PLUGIN_NAME   ?= block_catquizstatistics
-PLUGIN_REL    ?= blocks/catquizstatistics
-PLUGIN_DIR    ?= $(MOODLE_ROOT)/$(PLUGIN_REL)
-PHP           ?= /usr/bin/php
+THIS_DIR      := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+PLUGIN_DIR    ?= $(THIS_DIR)
+MOODLE_ROOT   ?= $(abspath $(PLUGIN_DIR)/../..)
+PLUGIN_NAME   ?= block_catquiz_statistics
+PLUGIN_REL    ?= blocks/catquiz_statistics
+PHP           ?= $(shell which php 2>/dev/null || echo /usr/bin/php)
 PHPCS         ?= phpcs
 PHPCBF        ?= phpcbf
 NPX           ?= npx
@@ -58,6 +66,7 @@ lint-php:
 		--extensions=php \
 		--severity=1 \
 		--no-cache \
+		--ignore=tools/ \
 		.
 
 fix-lint-php:

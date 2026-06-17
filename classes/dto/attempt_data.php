@@ -17,12 +17,12 @@
 /**
  * Data Transfer Object for a single catquiz attempt.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\dto;
+namespace block_catquiz_statistics\dto;
 
 /**
  * Immutable representation of a fully hydrated catquiz attempt.
@@ -34,9 +34,6 @@ namespace block_catquizstatistics\dto;
  *   Computed            – derived values populated by the repository
  */
 class attempt_data {
-
-    // ── Structured DB columns ─────────────────────────────────────────────
-
     /** @var int local_catquiz_attempts.id */
     public int $id = 0;
 
@@ -77,16 +74,16 @@ class attempt_data {
     public ?int $status = null;
 
     /** @var int|null Total items available in the item pool. */
-    public ?int $total_number_of_testitems = null;
+    public ?int $totaltestitems = null;
 
     /** @var int|null Number of items actually presented. */
-    public ?int $number_of_testitems_used = null;
+    public ?int $usedtestitems = null;
 
     /** @var float|null Person ability before this attempt. */
-    public ?float $personability_before_attempt = null;
+    public ?float $personabilitybeforeattempt = null;
 
     /** @var float|null Person ability after this attempt (global / root scale). */
-    public ?float $personability_after_attempt = null;
+    public ?float $personabilityafterattempt = null;
 
     /** @var int|null Attempt start Unix timestamp. */
     public ?int $starttime = null;
@@ -94,7 +91,6 @@ class attempt_data {
     /** @var int|null Attempt end Unix timestamp. */
     public ?int $endtime = null;
 
-    // ── Parsed from attempts.json ──────────────────────────────────────────
 
     /** @var int|null Global / root scale ID (json.catscaleid). */
     public ?int $globalscaleid = null;
@@ -126,7 +122,6 @@ class attempt_data {
     /** @var int|null Test ID (json.testid). */
     public ?int $testid = null;
 
-    // ── Parsed from graphicalsummary_data (always in attempts.json) ────────
 
     /**
      * Per-step trajectory data from graphicalsummary_data.
@@ -142,8 +137,7 @@ class attempt_data {
      */
     public array $graphicalsummary = [];
 
-    // ── Computed ──────────────────────────────────────────────────────────
 
     /** @var float|null Duration in seconds (endtime − starttime); null if incomplete. */
-    public ?float $duration_seconds = null;
+    public ?float $durationseconds = null;
 }

@@ -1,4 +1,4 @@
-# block_catquizstatistics — Lastenheft · Pflichtenheft · Blueprint
+# block_catquiz_statistics — Lastenheft · Pflichtenheft · Blueprint
 
 **Moodle Block-Plugin**
 Autor: Ralf Erlebach  
@@ -34,7 +34,7 @@ Ein eigenständiges Moodle-Block-Plugin, das
 | local_catquiz | 2024120500 | Pflicht-Dependency |
 | mod_adaptivequiz | 2024031502 | Wunderbyte-Fork, branch catmodel_main |
 | local_wunderbyte_table | 2024040200 | Pflicht-Dependency |
-| block_catquizstatistics | dieses Plugin | component: block_catquizstatistics |
+| block_catquiz_statistics | dieses Plugin | component: block_catquiz_statistics |
 
 ---
 
@@ -125,9 +125,9 @@ Felder: `difficulty`, `discrimination`, `guessing`.
 
 ---
 
-## 5 Statistikmodule (a–e)
+## 5 Auswertungsfunktionen
 
-### 5.1 Modul a — Testergebnisse (Phase 1, MVP)
+### 5.1 Testergebnisse (Phase 1, MVP)
 
 **Flat/Wide-Spalten:**
 userid, username, firstname, lastname, email,
@@ -143,22 +143,22 @@ primary_scale, primary_pp, primary_se,
 `attempts_raw`, `attempts_wide`, `scale_summary`, `subscale_scores`,
 `subscale_se`, `subscale_n`, `subscale_frac`, `metadata`
 
-### 5.2 Modul b — Testnutzung (Phase 2)
+### 5.2 Testnutzung (Phase 2)
 
 Reliable Change Index: Δability / √(SE_first² + SE_last²)
 
-### 5.3 Modul c — Testverlauf (Phase 2)
+### 5.3 Testverlauf (Phase 2)
 
 - Schicht 1: QE-Join (erfordert enableqejoin)
 - Schicht 2: graphicalsummary_data (immer verfügbar)
 - Schicht 3: debug_info (optional, store_debug_info=true)
 
-### 5.4 Modul d — Lernangebotsnutzung (Phase 3, opt-in)
+### 5.4 Lernangebotsnutzung (Phase 3, opt-in)
 
 Erfordert: enablemoduled=1, explizite Datenschutzgrundlage.
 Eigene Tabellen → Privacy-Provider auf plugin\provider upgraden.
 
-### 5.5 Modul e — Item- und Antwortanalyse (Phase 3)
+### 5.5 Item- und Antwortanalyse (Phase 3)
 
 Antwortdarstellung: `responsesummary | fraction | N | json`
 Sortierung: fraction DESC, N DESC
@@ -185,7 +185,7 @@ Multi-Sheet-Export: Writer-Klasse direkt verwenden (nicht dataformat::download_d
 |---|---|---|---|
 | `defaultformat` | select | `csv` | Standard-Exportformat |
 | `maxsheets` | int | 50 | Max. Blätter im Workbook |
-| `enableqejoin` | checkbox | 1 | QE-Join für Module c/e |
+| `enableqejoin` | checkbox | 1 | QE-Join für Test Progress/e |
 | `enablemoduled` | checkbox | 0 | Lernangebotsnutzung (opt-in) |
 
 ---
@@ -193,9 +193,9 @@ Multi-Sheet-Export: Writer-Klasse direkt verwenden (nicht dataformat::download_d
 ## 8 Architektur und Klassen-Hierarchie
 
 ```
-block_catquizstatistics/
+block_catquiz_statistics/
 │
-├── block_catquizstatistics.php          # Block-Klasse (global namespace)
+├── block_catquiz_statistics.php          # Block-Klasse (global namespace)
 ├── report.php                           # Kurs-Bericht-Einstieg (viewdetails)
 ├── adminreport.php                      # Systemweiter Admin-Report (viewall)
 ├── settings.php                         # Admin-Einstellungen
@@ -206,21 +206,22 @@ block_catquizstatistics/
 │   ├── export/
 │   │   ├── base_exporter.php            # Abstract, dataformat wrapper
 │   │   ├── exporter_factory.php         # Modul-ID → Exporter
-│   │   └── attempt_results_exporter.php # Modul a, 8-Sheet override (Phase 1)
+│   │   └── attempt_results_exporter.php # Testergebnisse, 8-Sheet override (Phase 1)
 │   ├── local/response_normalizer.php    # Qtype-aware, shuffle-unabhängig
 │   ├── output/main.php                  # Block-Widget Renderable
 │   ├── output/report_page.php           # Report-Page Renderable
 │   ├── privacy/provider.php             # metadata\provider (MVP)
 │   ├── report/
 │   │   ├── report_interface.php         # get_module_id, get_flat_rows, ...
-│   │   └── attempt_results_report.php   # Modul a
+│   │   └── attempt_results_report.php   # Testergebnisse
 │   ├── repository/
 │   │   ├── attempt_filter.php           # Immutable Filter-VO (PHP 8.1 readonly)
 │   │   └── attempt_repository.php       # EINZIGE DB-Schicht
 │   └── task/export_adhoc_task.php       # Adhoc-Task für große Exports
 │
+├── lib.php                              # Kurs-Navigations-Callback (Berichte-Reiter)
 ├── db/access.php                        # 7 Capabilities
-├── lang/{en,de}/block_catquizstatistics.php
+├── lang/{en,de}/block_catquiz_statistics.php
 ├── templates/{block_main,report_page}.mustache
 └── tests/
     ├── behat/{block_visibility,report_access}.feature
@@ -242,6 +243,27 @@ Gate-Job `ci-complete` als Branch-Protection-Status-Check.
 
 ---
 
+## 11 Kurs-Navigation: "Berichte"-Reiter
+
+Der Callback `block_catquiz_statistics_extend_navigation_course()` in `lib.php`
+fügt dem **"Berichte"-Knoten** (`coursereports`) der Kursnavigation automatisch
+einen Link auf `report.php` hinzu.
+
+**Anzeige-Bedingung:** Der Link erscheint, wenn
+
+- der Block im Kurs platziert ist **oder**
+- mindestens eine mod_adaptivequiz-Instanz im Kurs existiert.
+
+So bleibt der Bericht auch dann erreichbar, wenn der Block temporär aus dem
+Kurs entfernt wurde (z.B. für ein aufgeräumtes Layout).
+
+**Sichtbarkeit:** Nur Nutzer mit `block/catquiz_statistics:view` und
+ausreichenden catquiz-Rechten sehen den Eintrag.
+
+**Fallback:** Ist kein `coursereports`-Knoten vorhanden (keine weiteren
+Berichtsplugins installiert), bleibt der Link über den Block-Widget und
+die direkte URL erreichbar.
+
 ## 10 Nicht umgesetzte Entwurfsentscheidungen (bewusst zurückgestellt)
 
 | Thema | Entscheidung |
@@ -250,5 +272,5 @@ Gate-Job `ci-complete` als Branch-Protection-Status-Check.
 | AMD JavaScript | Kein AMD im Stub; `lint-js` erkennt leeres `amd/src/` und überspringt |
 | `adaptivequizcatmodel_catquiz` in Pflicht-Dependencies | Indirekte Dependency über local_catquiz; nicht in version.php |
 | `local_moodlecheck` PHPDoc-Prüfung | Nur in `make check` / lint-js-Job; kein eigener CI-Job |
-| Privacy `plugin\provider` | Phase 3 (Modul d), wenn eigene Tabellen hinzukommen |
+| Privacy `plugin\provider` | Phase 3 (Lernangebotsnutzung), wenn eigene Tabellen hinzukommen |
 | `local/catquiz:view_users_feedback` für `view` | Abgelehnt: `view` zeigt nur Aggregate → keine personen­bezogenen Daten |

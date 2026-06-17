@@ -15,14 +15,14 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Renderable for the block_catquizstatistics widget.
+ * Renderable for the block_catquiz_statistics widget.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\output;
+namespace block_catquiz_statistics\output;
 
 use renderable;
 use renderer_base;
@@ -32,6 +32,23 @@ use templatable;
  * Data container for the block_main.mustache template.
  */
 class main implements renderable, templatable {
+    /** @var int Course ID. */
+    private int $courseid;
+
+    /** @var string URL to report.php. */
+    private string $reporturl;
+
+    /** @var bool Whether local_catquiz is available. */
+    private bool $hascatquiz;
+
+    /** @var string Message shown when catquiz is absent. */
+    private string $nocatquizmessage;
+
+    /** @var bool Whether user has viewall capability. */
+    private bool $canviewall;
+
+    /** @var string URL to adminreport.php (empty if not allowed). */
+    private string $adminreporturl;
 
     /**
      * Constructor.
@@ -44,13 +61,19 @@ class main implements renderable, templatable {
      * @param string $adminreporturl   URL to adminreport.php (empty if not allowed).
      */
     public function __construct(
-        private readonly int $courseid,
-        private readonly string $reporturl,
-        private readonly bool $hascatquiz,
-        private readonly string $nocatquizmessage,
-        private readonly bool $canviewall,
-        private readonly string $adminreporturl,
+        int $courseid,
+        string $reporturl,
+        bool $hascatquiz,
+        string $nocatquizmessage,
+        bool $canviewall,
+        string $adminreporturl
     ) {
+        $this->courseid         = $courseid;
+        $this->reporturl        = $reporturl;
+        $this->hascatquiz       = $hascatquiz;
+        $this->nocatquizmessage = $nocatquizmessage;
+        $this->canviewall       = $canviewall;
+        $this->adminreporturl   = $adminreporturl;
     }
 
     /**

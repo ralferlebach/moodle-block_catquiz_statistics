@@ -17,12 +17,12 @@
 /**
  * Immutable filter value object for attempt queries.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\repository;
+namespace block_catquiz_statistics\repository;
 
 /**
  * Encapsulates every dimension by which attempt queries can be scoped.
@@ -31,39 +31,62 @@ namespace block_catquizstatistics\repository;
  * Use {@see self::from_request()} to build from HTTP parameters.
  */
 class attempt_filter {
+    /** @var int Mandatory course scope (0 = system-wide, requires viewall). */
+    public readonly int $courseid;
+
+    /** @var int|null Restrict to a single mod_adaptivequiz instance. */
+    public readonly ?int $instanceid;
+
+    /** @var int|null Restrict to a specific CAT scale. */
+    public readonly ?int $scaleid;
+
+    /** @var int|null Unix timestamp lower bound (attempt starttime). */
+    public readonly ?int $starttime;
+
+    /** @var int|null Unix timestamp upper bound (attempt starttime). */
+    public readonly ?int $endtime;
+
+    /** @var bool Allow cross-course query (requires viewall capability). */
+    public readonly bool $systemwide;
 
     /**
      * Constructor – all parameters optional except courseid.
      *
-     * @param int      $courseid   Mandatory course scope (0 = system-wide, requires viewall).
+     * @param int      $courseid   Mandatory course scope.
      * @param int|null $instanceid Restrict to a single mod_adaptivequiz instance.
      * @param int|null $scaleid    Restrict to a specific CAT scale.
-     * @param int|null $starttime  Unix timestamp lower bound (attempt starttime).
-     * @param int|null $endtime    Unix timestamp upper bound (attempt starttime).
-     * @param bool     $systemwide Allow cross-course query (requires viewall capability).
+     * @param int|null $starttime  Unix timestamp lower bound.
+     * @param int|null $endtime    Unix timestamp upper bound.
+     * @param bool     $systemwide Allow cross-course query.
      */
     public function __construct(
-        public readonly int $courseid,
-        public readonly ?int $instanceid = null,
-        public readonly ?int $scaleid = null,
-        public readonly ?int $starttime = null,
-        public readonly ?int $endtime = null,
-        public readonly bool $systemwide = false,
+        int $courseid,
+        ?int $instanceid = null,
+        ?int $scaleid = null,
+        ?int $starttime = null,
+        ?int $endtime = null,
+        bool $systemwide = false
     ) {
+        $this->courseid   = $courseid;
+        $this->instanceid = $instanceid;
+        $this->scaleid    = $scaleid;
+        $this->starttime  = $starttime;
+        $this->endtime    = $endtime;
+        $this->systemwide = $systemwide;
     }
 
     /**
      * Build a filter from current HTTP request parameters.
      *
-     * @param int      $courseid   Course ID (already resolved, required_param'd by caller).
-     * @param int|null $instanceid Optional instance override (skip optional_param if provided).
+     * @param int      $courseid   Course ID (already resolved by caller).
+     * @param int|null $instanceid Optional instance override.
      * @return self
      */
     public static function from_request(int $courseid, ?int $instanceid = null): self {
         $instanceid = $instanceid ?? (optional_param('instanceid', 0, PARAM_INT) ?: null);
-        $scaleid    = optional_param('scaleid',    0, PARAM_INT) ?: null;
-        $starttime  = optional_param('starttime',  0, PARAM_INT) ?: null;
-        $endtime    = optional_param('endtime',    0, PARAM_INT) ?: null;
+        $scaleid = optional_param('scaleid', 0, PARAM_INT) ?: null;
+        $starttime = optional_param('starttime', 0, PARAM_INT) ?: null;
+        $endtime = optional_param('endtime', 0, PARAM_INT) ?: null;
 
         return new self(
             courseid: $courseid,

@@ -1,5 +1,5 @@
 ##############################################################################
-# GitHub Actions CI – block_catquizstatistics (CAT Quiz Statistics)
+# GitHub Actions CI – block_catquiz_statistics (CAT Quiz Statistics)
 #
 # Triggered on push / PR to any branch EXCEPT main (dev workflow).
 #
@@ -319,7 +319,7 @@ jobs:
         run: |
           moodle-plugin-ci behat \
             --profile chrome \
-            --tags "@block_catquizstatistics&&~@broken" \
+            --tags "@block_catquiz_statistics&&~@broken" \
             --start-servers
 
       - name: Upload failure screenshots

@@ -15,17 +15,17 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Exporter for Module a – Attempt Results.
+ * Exporter for Test Results.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\export;
+namespace block_catquiz_statistics\export;
 
 /**
- * Module a exporter.
+ * Test Results exporter.
  *
  * Inherits single- and multi-sheet routing from base_exporter.
  * Phase 1 will override export_multisheet() to write 8 named sheets:

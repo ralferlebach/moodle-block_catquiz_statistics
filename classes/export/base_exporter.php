@@ -17,15 +17,15 @@
 /**
  * Abstract base for all export format writers.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\export;
+namespace block_catquiz_statistics\export;
 
-use block_catquizstatistics\report\report_interface;
-use block_catquizstatistics\repository\attempt_filter;
+use block_catquiz_statistics\report\report_interface;
+use block_catquiz_statistics\repository\attempt_filter;
 
 /**
  * Base exporter – wraps Moodle's \core\dataformat API.
@@ -40,7 +40,6 @@ use block_catquizstatistics\repository\attempt_filter;
  * silently fall back to wide/flat mode.
  */
 abstract class base_exporter {
-
     /** Supported single-sheet and multi-sheet formats. */
     protected const SUPPORTED_FORMATS = ['csv', 'json', 'excel', 'ods'];
 
@@ -103,7 +102,7 @@ abstract class base_exporter {
      * named sheets (attempts_raw, attempts_wide, scale_summary, subscale_scores,
      * subscale_se, subscale_n, subscale_frac, metadata).
      *
-     * Respects block_catquizstatistics/maxsheets setting.
+     * Respects block_catquiz_statistics/maxsheets setting.
      *
      * @param report_interface $report   Report module.
      * @param attempt_filter   $filter   Query scope.

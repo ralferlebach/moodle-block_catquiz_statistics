@@ -15,44 +15,46 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Module a – Attempt Results report.
+ * Test Results report (Phase 1).
  *
- * Phase 1 target columns (flat / wide):
- *   userid, username, firstname, lastname, email
- *   testid, attemptid, starttime, endtime, duration
- *   teststrategy, status, number_of_testitems_used
- *   global_scale, global_pp, global_se
- *   primary_scale, primary_pp, primary_se
- *   [for each subscale:] scale_{id}_pp, scale_{id}_se, scale_{id}_n, scale_{id}_frac
+ * Target columns for flat/wide export:
+ *   userid, username, firstname, lastname, email,
+ *   testid, attemptid, starttime, endtime, duration, teststrategy,
+ *   status, usedTestitems, global_scale, global_pp, global_se,
+ *   primary_scale, primary_pp, primary_se,
+ *   [per subscale:] scale_{id}_pp, scale_{id}_se, scale_{id}_n, scale_{id}_frac.
  *
  * SE validity rule: output NULL when quiz settings specify nminscale or semax
  * and the attempt does not meet the threshold; assume fulfilled when settings
- * are absent.  See feedbacksettings.php::filter_nminscale() / filter_semax().
+ * are absent.  See feedbacksettings.php filter_nminscale() / filter_semax().
  *
  * XLSX / ODS multi-sheet names: attempts_raw, attempts_wide, scale_summary,
  *   subscale_scores, subscale_se, subscale_n, subscale_frac, metadata.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\report;
+namespace block_catquiz_statistics\report;
 
-use block_catquizstatistics\repository\attempt_filter;
-use block_catquizstatistics\repository\attempt_repository;
+use block_catquiz_statistics\repository\attempt_filter;
+use block_catquiz_statistics\repository\attempt_repository;
 
 /**
- * Module a: Test Results.
+ * Test Results report.
  */
 class attempt_results_report implements report_interface {
+    /** @var attempt_repository Injected repository. */
+    private attempt_repository $repository;
 
     /**
      * Constructor.
      *
      * @param attempt_repository $repository Injected repository.
      */
-    public function __construct(private readonly attempt_repository $repository) {
+    public function __construct(attempt_repository $repository) {
+        $this->repository = $repository;
     }
 
     /**
@@ -70,16 +72,13 @@ class attempt_results_report implements report_interface {
      * @return string
      */
     public function get_module_name(): string {
-        return get_string('module_a', 'block_catquizstatistics');
+        return get_string('module_a', 'block_catquiz_statistics');
     }
 
     /**
      * Return flat attempt rows for single-sheet export.
      *
-     * TODO Phase 1: call $this->repository->get_attempts($filter), parse
-     * personabilities/se/primaryscale from each attempt_data DTO, apply SE
-     * validity check (nminscale / semax from local_catquiz_tests.json), and
-     * return one associative array per attempt.
+     * Stub — returns empty array until Phase 1 implementation.
      *
      * @param attempt_filter $filter Query scope.
      * @return array[]
@@ -91,12 +90,13 @@ class attempt_results_report implements report_interface {
     /**
      * Return aggregate statistics over the filtered attempt set.
      *
-     * TODO Phase 1: compute n, mean, median, SD, min, max, Q1, Q3 for
-     * personability_after_attempt, duration, number_of_testitems_used, SE.
+     * Computes n, mean, median, SD, min, max, Q1, Q3 for
+     * personabilityAfterAttempt, duration, usedTestitems, SE.
      *
-     * Reliable Change Index (RCI):
-     *   delta_ability / sqrt(SE_first² + SE_last²)
-     * – implemented in Module b (usage_report), referenced here for context.
+     * Reliable Change Index (RCI) = delta_ability / sqrt(SE_first^2 + SE_last^2)
+     * is implemented in the Test Usage report, referenced here for context.
+     *
+     * Stub — not yet implemented.
      *
      * @param attempt_filter $filter Query scope.
      * @return array<string,mixed>
@@ -108,10 +108,11 @@ class attempt_results_report implements report_interface {
     /**
      * Return column definitions for export headers.
      *
+     * Stub — returns empty array until Phase 1 implementation.
+     *
      * @return array<string,string>
      */
     public function get_columns(): array {
-        // TODO Phase 1: populate with all flat columns including dynamic subscale columns.
         return [];
     }
 }

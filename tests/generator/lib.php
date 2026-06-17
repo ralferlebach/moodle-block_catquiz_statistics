@@ -15,24 +15,23 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Test data generator for block_catquizstatistics.
+ * Test data generator for block_catquiz_statistics.
  *
  * Provides factory methods that create catquiz attempt records and related
  * fixtures for PHPUnit integration tests.  Requires local_catquiz to be
  * installed; tests calling these methods should guard with markTestSkipped()
  * when the plugin is absent.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @category   test
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 /**
- * Generator for block_catquizstatistics test data.
+ * Generator for block_catquiz_statistics test data.
  */
-class block_catquizstatistics_generator extends testing_block_generator {
-
+class block_catquiz_statistics_generator extends testing_block_generator {
     /**
      * Insert a minimal local_catquiz_attempts record for testing.
      *

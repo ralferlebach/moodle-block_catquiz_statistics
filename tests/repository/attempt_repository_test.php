@@ -17,22 +17,21 @@
 /**
  * PHPUnit tests for attempt_repository.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\repository;
+namespace block_catquiz_statistics\repository;
 
 use advanced_testcase;
 
 /**
  * Tests for attempt_repository.
  *
- * @covers \block_catquizstatistics\repository\attempt_repository
+ * @covers \block_catquiz_statistics\repository\attempt_repository
  */
 final class attempt_repository_test extends advanced_testcase {
-
     /** @var attempt_repository */
     private attempt_repository $repo;
 

@@ -1,4 +1,4 @@
-@block @block_catquizstatistics @block_catquizstatistics_report
+@block @block_catquiz_statistics @block_catquiz_statistics_report
 Feature: CAT Quiz Statistics report page access control
   As a site administrator
   I want report.php to be restricted to users with viewdetails capability
@@ -20,11 +20,11 @@ Feature: CAT Quiz Statistics report page access control
   @javascript
   Scenario: Editing teacher can access the course report page
     Given I log in as "teacher1"
-    When I am on the "C1" course "catquizstatistics report" page
+    When I am on the "C1" course "catquiz_statistics report" page
     Then I should see "CAT Quiz Statistics"
 
   @javascript
   Scenario: Student is denied access to the course report page
     Given I log in as "student1"
-    When I am on the "C1" course "catquizstatistics report" page
+    When I am on the "C1" course "catquiz_statistics report" page
     Then I should see "You do not have permission"

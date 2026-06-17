@@ -17,12 +17,12 @@
 /**
  * Renderable for the full statistics report page (course and system-wide).
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\output;
+namespace block_catquiz_statistics\output;
 
 use renderable;
 use renderer_base;
@@ -32,21 +32,36 @@ use templatable;
  * Data container for the report_page.mustache template.
  */
 class report_page implements renderable, templatable {
+    /** @var int Course ID (0 for system-wide admin report). */
+    private int $courseid;
+
+    /** @var string Page heading string. */
+    private string $heading;
+
+    /** @var string Placeholder message shown in stub phase. */
+    private string $comingsoon;
+
+    /** @var bool True when rendering the admin system-wide report. */
+    private bool $issystemwide;
 
     /**
      * Constructor.
      *
      * @param int    $courseid     Course ID (0 for system-wide admin report).
      * @param string $heading      Page heading string.
-     * @param string $comingsoon   Placeholder message for Phase 1 stub.
-     * @param bool   $issystemwide True when rendering the admin system-wide report.
+     * @param string $comingsoon   Placeholder message for stub phase.
+     * @param bool   $issystemwide True when rendering the admin report.
      */
     public function __construct(
-        private readonly int $courseid,
-        private readonly string $heading,
-        private readonly string $comingsoon,
-        private readonly bool $issystemwide,
+        int $courseid,
+        string $heading,
+        string $comingsoon,
+        bool $issystemwide
     ) {
+        $this->courseid     = $courseid;
+        $this->heading      = $heading;
+        $this->comingsoon   = $comingsoon;
+        $this->issystemwide = $issystemwide;
     }
 
     /**

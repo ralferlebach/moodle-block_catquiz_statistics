@@ -1,4 +1,4 @@
-## Session-Start – block_catquizstatistics
+## Session-Start – block_catquiz_statistics
 
 Du arbeitest an einem Moodle-Block-Plugin. Hier ist der Kontext:
 
@@ -8,7 +8,7 @@ Du arbeitest an einem Moodle-Block-Plugin. Hier ist der Kontext:
 
 | | |
 |---|---|
-| Plugin | `block_catquizstatistics` (Verzeichnis: `blocks/catquizstatistics/`) |
+| Plugin | `block_catquiz_statistics` (Verzeichnis: `blocks/catquiz_statistics/`) |
 | Moodle | ≥ 4.5 (2024100700); getestet: 4.5, 5.0 |
 | PHP | ≥ 8.1 (readonly, named args, enum) |
 | Autor | Ralf Erlebach, GPL v3 |
@@ -19,7 +19,7 @@ Du arbeitest an einem Moodle-Block-Plugin. Hier ist der Kontext:
 
 ### Aktueller Entwicklungsstand
 
-[HIER STAND EINTRAGEN – z.B. "Stub v0.1 komplett, Phase 1 Modul a in Arbeit"]
+[HIER STAND EINTRAGEN – z.B. "Stub v0.1 komplett, Phase 1 Testergebnisse in Arbeit"]
 
 **Zuletzt abgeschlossen:**
 - [ ] (Eintragen)
@@ -44,7 +44,7 @@ Du arbeitest an einem Moodle-Block-Plugin. Hier ist der Kontext:
 6. **Export**: `\core\dataformat` für single-sheet; Writer-Klasse direkt für
    Multi-Sheet (8 Blätter, XLSX/ODS).  Keine eigene Writer-Bibliothek.
 7. **Privacy**: metadata\provider nur (MVP).  Upgrade auf plugin\provider wenn
-   Modul d eigene Tabellen hinzufügt.
+   Lernangebotsnutzung eigene Tabellen hinzufügt.
 8. **CI**: moodle-ci.yml (non-main, 4 Jobs + Gate) + moodle-release.yml (main,
    volle Matrix mit --fail-on-warning).  Gate: `ci-complete`.
 
@@ -53,14 +53,14 @@ Du arbeitest an einem Moodle-Block-Plugin. Hier ist der Kontext:
 ### Wichtige Dateipfade
 
 ```
-block_catquizstatistics/
+block_catquiz_statistics/
 ├── classes/access.php             Capability Guard (statische Methoden)
 ├── classes/repository/            EINZIGE DB-Schicht
 │   ├── attempt_filter.php         Filter-VO (PHP 8.1 readonly)
 │   └── attempt_repository.php     JSON-Parsing, Schema-Check
 ├── classes/dto/attempt_data.php   DTO (alle Felder)
-├── classes/report/                Report-Module a–e (Interface + Impls)
-├── classes/export/                Exporter (Factory + Module a)
+├── classes/report/                Auswertungsfunktionen (Interface + Impls)
+├── classes/export/                Exporter (Factory + Test Results)
 ├── docs/materials/                Blueprint, Lastenheft, Pflichtenheft
 └── docs/sessions/                 Sitzungsprotokolle
 ```

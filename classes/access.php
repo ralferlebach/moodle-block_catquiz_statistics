@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Centralised capability checks for block_catquizstatistics.
+ * Centralised capability checks for block_catquiz_statistics.
  *
  * Every access decision in the plugin flows through this class so that
  * the "strict" dual-capability rule (own capability + local/catquiz cap)
@@ -27,25 +27,23 @@
  *   viewall                           →  own cap  AND  local/catquiz:canmanage (system ctx)
  *   view                              →  own cap only  (aggregate stats, no personal data)
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics;
+namespace block_catquiz_statistics;
 
 /**
  * Static capability helper.
  */
 class access {
-
     /** local_catquiz capability required for personal data access. */
     private const CATQUIZ_VIEW_USERS = 'local/catquiz:view_users_feedback';
 
     /** local_catquiz capability required for system-wide / management access. */
     private const CATQUIZ_MANAGE = 'local/catquiz:canmanage';
 
-    // ── view ──────────────────────────────────────────────────────────────
 
     /**
      * Whether the current user may see the block widget / aggregate stats.
@@ -54,10 +52,9 @@ class access {
      * @return bool
      */
     public static function has_view(\context $context): bool {
-        return has_capability('block/catquizstatistics:view', $context);
+        return has_capability('block/catquiz_statistics:view', $context);
     }
 
-    // ── viewdetails ───────────────────────────────────────────────────────
 
     /**
      * Whether the current user may access per-user report data.
@@ -68,7 +65,7 @@ class access {
      * @return bool
      */
     public static function has_viewdetails(\context $context): bool {
-        return has_capability('block/catquizstatistics:viewdetails', $context)
+        return has_capability('block/catquiz_statistics:viewdetails', $context)
             && has_capability(self::CATQUIZ_VIEW_USERS, $context);
     }
 
@@ -79,11 +76,10 @@ class access {
      * @return void
      */
     public static function require_viewdetails(\context $context): void {
-        require_capability('block/catquizstatistics:viewdetails', $context);
+        require_capability('block/catquiz_statistics:viewdetails', $context);
         require_capability(self::CATQUIZ_VIEW_USERS, $context);
     }
 
-    // ── viewdebug ─────────────────────────────────────────────────────────
 
     /**
      * Whether the current user may view trajectory / debug data.
@@ -92,11 +88,10 @@ class access {
      * @return bool
      */
     public static function has_viewdebug(\context $context): bool {
-        return has_capability('block/catquizstatistics:viewdebug', $context)
+        return has_capability('block/catquiz_statistics:viewdebug', $context)
             && has_capability(self::CATQUIZ_VIEW_USERS, $context);
     }
 
-    // ── export ────────────────────────────────────────────────────────────
 
     /**
      * Whether the current user may trigger exports.
@@ -105,7 +100,7 @@ class access {
      * @return bool
      */
     public static function has_export(\context $context): bool {
-        return has_capability('block/catquizstatistics:export', $context)
+        return has_capability('block/catquiz_statistics:export', $context)
             && has_capability(self::CATQUIZ_VIEW_USERS, $context);
     }
 
@@ -116,11 +111,10 @@ class access {
      * @return void
      */
     public static function require_export(\context $context): void {
-        require_capability('block/catquizstatistics:export', $context);
+        require_capability('block/catquiz_statistics:export', $context);
         require_capability(self::CATQUIZ_VIEW_USERS, $context);
     }
 
-    // ── viewall ───────────────────────────────────────────────────────────
 
     /**
      * Whether the current user may access the system-wide admin report.
@@ -131,7 +125,7 @@ class access {
      */
     public static function has_viewall(): bool {
         $sysctx = \context_system::instance();
-        return has_capability('block/catquizstatistics:viewall', $sysctx)
+        return has_capability('block/catquiz_statistics:viewall', $sysctx)
             && has_capability(self::CATQUIZ_MANAGE, $sysctx);
     }
 
@@ -142,11 +136,10 @@ class access {
      */
     public static function require_viewall(): void {
         $sysctx = \context_system::instance();
-        require_capability('block/catquizstatistics:viewall', $sysctx);
+        require_capability('block/catquiz_statistics:viewall', $sysctx);
         require_capability(self::CATQUIZ_MANAGE, $sysctx);
     }
 
-    // ── infrastructure ────────────────────────────────────────────────────
 
     /**
      * Whether the local_catquiz plugin is installed and available.

@@ -17,15 +17,15 @@
 /**
  * Factory that maps module IDs to their exporter and report implementations.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\export;
+namespace block_catquiz_statistics\export;
 
-use block_catquizstatistics\report\report_interface;
-use block_catquizstatistics\repository\attempt_repository;
+use block_catquiz_statistics\report\report_interface;
+use block_catquiz_statistics\repository\attempt_repository;
 
 /**
  * Creates the correct report + exporter pair for a given module ID.
@@ -34,7 +34,6 @@ use block_catquizstatistics\repository\attempt_repository;
  *             'd' Learning Activity | 'e' Item & Response Analysis
  */
 class exporter_factory {
-
     /**
      * Build a report object for the given module ID.
      *
@@ -49,11 +48,11 @@ class exporter_factory {
     ): report_interface {
         switch ($moduleid) {
             case 'a':
-                return new \block_catquizstatistics\report\attempt_results_report($repository);
+                return new \block_catquiz_statistics\report\attempt_results_report($repository);
             default:
                 throw new \coding_exception(
                     'Unknown report module id: ' . $moduleid
-                    . '. Modules b–e are not yet implemented.'
+                    . '. further reporting features are not yet implemented.'
                 );
         }
     }

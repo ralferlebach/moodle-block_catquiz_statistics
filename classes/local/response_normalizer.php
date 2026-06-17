@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Qtype-aware response normaliser for Module e (Item & Response Analysis).
+ * Qtype-aware response normaliser for Item & Response Analysis Item & Response Analysis.
  *
  * Transforms raw question_attempt_step_data key-value pairs into a canonical,
  * order-independent representation suitable for distractor frequency tables.
@@ -28,7 +28,7 @@
  *   - multianswer (cloze): recursive per sub-question; fallback to fraction only
  *   - unknown types: fraction + responsesummary (as-is from QE)
  *
- * Output row for distractor analysis (Module e):
+ * Output row for distractor analysis (Item & Response Analysis):
  *   response_canonical  – human-readable, order-independent  (Excel-friendly)
  *   response_fingerprint – canonical answer-ID set (for grouping)
  *   fraction            – 0.0–1.0 (always reliable)
@@ -37,18 +37,17 @@
  *
  * Sort order: fraction DESC, N DESC (correct answer always first).
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\local;
+namespace block_catquiz_statistics\local;
 
 /**
  * Normalises raw question_attempt_step_data into order-independent response rows.
  */
 class response_normalizer {
-
     /** Separator between options in multi-select canonical strings. */
     private const OPTION_SEP = ' | ';
 
@@ -68,11 +67,10 @@ class response_normalizer {
         ?float $fraction,
         string $responsesummary
     ): object {
-        // TODO Phase 2: implement per-qtype adapter methods.
-        // Stub: fall back to responsesummary | fraction for all types.
+        // Stub: falls back to responsesummary and fraction for all types (implement in Phase 2).
         return (object) [
             'response_canonical'   => $responsesummary,
-            'response_fingerprint' => $responsesummary, // order-sensitive in stub; fixed Phase 2
+            'response_fingerprint' => $responsesummary, // Order-sensitive in stub; fixed in Phase 2.
             'fraction'             => $fraction,
             'response_json'        => json_encode($stepdata),
         ];
@@ -94,7 +92,6 @@ class response_normalizer {
      * @return object|null Normalised response or null when _order is absent.
      */
     private function normalise_multichoice(array $stepdata, int $questionid): ?object {
-        // TODO Phase 2.
         return null;
     }
 
@@ -109,7 +106,6 @@ class response_normalizer {
      * @return object|null
      */
     private function normalise_structured(string $qtype, array $stepdata, int $questionid): ?object {
-        // TODO Phase 2.
         return null;
     }
 
@@ -126,8 +122,7 @@ class response_normalizer {
      * @return object
      */
     private function normalise_cloze(array $stepdata, int $questionid, ?float $fraction): object {
-        // TODO Phase 2: recursive per sub-question.
-        // Stub: fraction + raw JSON.
+        // Phase 2: implement recursive per sub-question. Stub: fraction + raw JSON.
         return (object) [
             'response_canonical'   => '',
             'response_fingerprint' => '',

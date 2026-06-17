@@ -15,32 +15,29 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Block class for block_catquizstatistics.
+ * Block class for block_catquiz_statistics.
  *
  * Renders a compact entry widget on the course page that links to the full
  * report page (report.php) and, for managers, to the system-wide admin report
  * (adminreport.php).  No data is fetched or rendered inside the block itself;
  * all heavy lifting happens on the dedicated report pages.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * CAT Quiz Statistics block.
  */
-class block_catquizstatistics extends block_base {
-
+class block_catquiz_statistics extends block_base {
     /**
      * Initialise block title.
      *
      * @return void
      */
     public function init(): void {
-        $this->title = get_string('pluginname', 'block_catquizstatistics');
+        $this->title = get_string('pluginname', 'block_catquiz_statistics');
     }
 
     /**
@@ -109,35 +106,35 @@ class block_catquizstatistics extends block_base {
         }
 
         // Minimum requirement: capability to see the block widget.
-        if (!has_capability('block/catquizstatistics:view', $coursecontext)) {
+        if (!has_capability('block/catquiz_statistics:view', $coursecontext)) {
             $this->content->text = '';
             return $this->content;
         }
 
         $courseid   = (int) $coursecontext->instanceid;
-        $hascatquiz = \block_catquizstatistics\access::is_catquiz_available();
+        $hascatquiz = \block_catquiz_statistics\access::is_catquiz_available();
 
         $reporturl = (new moodle_url(
-            '/blocks/catquizstatistics/report.php',
+            '/blocks/catquiz_statistics/report.php',
             ['courseid' => $courseid]
         ))->out(false);
 
-        $canviewall    = \block_catquizstatistics\access::has_viewall();
+        $canviewall    = \block_catquiz_statistics\access::has_viewall();
         $adminreporturl = $canviewall
-            ? (new moodle_url('/blocks/catquizstatistics/adminreport.php'))->out(false)
+            ? (new moodle_url('/blocks/catquiz_statistics/adminreport.php'))->out(false)
             : '';
 
-        $main = new \block_catquizstatistics\output\main(
+        $main = new \block_catquiz_statistics\output\main(
             courseid: $courseid,
             reporturl: $reporturl,
             hascatquiz: $hascatquiz,
-            nocatquizmessage: $hascatquiz ? '' : get_string('nocatquiz', 'block_catquizstatistics'),
+            nocatquizmessage: $hascatquiz ? '' : get_string('nocatquiz', 'block_catquiz_statistics'),
             canviewall: $canviewall,
             adminreporturl: $adminreporturl,
         );
 
         $this->content->text = $OUTPUT->render_from_template(
-            'block_catquizstatistics/block_main',
+            'block_catquiz_statistics/block_main',
             $main->export_for_template($OUTPUT)
         );
 

@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Capabilities for block_catquizstatistics.
+ * Capabilities for block_catquiz_statistics.
  *
  * Access model (all personal-data capabilities additionally require
  * local/catquiz:view_users_feedback; this is enforced in access.php):
@@ -27,7 +27,7 @@
  *   viewall      – cross-course, system-wide aggregation (manager only).
  *   addinstance  – place the block on a course page.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -37,7 +37,7 @@ defined('MOODLE_INTERNAL') || die();
 $capabilities = [
 
     // Place the block on a course page.
-    'block/catquizstatistics:addinstance' => [
+    'block/catquiz_statistics:addinstance' => [
         'riskbitmask'  => RISK_SPAM | RISK_XSS,
         'captype'      => 'write',
         'contextlevel' => CONTEXT_BLOCK,
@@ -48,7 +48,7 @@ $capabilities = [
     ],
 
     // My-page instance – explicitly disabled.
-    'block/catquizstatistics:myaddinstance' => [
+    'block/catquiz_statistics:myaddinstance' => [
         'riskbitmask'  => RISK_SPAM | RISK_XSS,
         'captype'      => 'write',
         'contextlevel' => CONTEXT_SYSTEM,
@@ -56,7 +56,7 @@ $capabilities = [
     ],
 
     // See the block widget and anonymous aggregate statistics.
-    'block/catquizstatistics:view' => [
+    'block/catquiz_statistics:view' => [
         'captype'      => 'read',
         'contextlevel' => CONTEXT_COURSE,
         'archetypes'   => [
@@ -68,7 +68,7 @@ $capabilities = [
 
     // Access the full report including per-user ability, SE and response data.
     // Additionally enforced: local/catquiz:view_users_feedback.
-    'block/catquizstatistics:viewdetails' => [
+    'block/catquiz_statistics:viewdetails' => [
         'riskbitmask'  => RISK_PERSONAL,
         'captype'      => 'read',
         'contextlevel' => CONTEXT_COURSE,
@@ -80,7 +80,7 @@ $capabilities = [
 
     // View per-attempt trajectories (graphicalsummary_data / debug_info).
     // Additionally enforced: local/catquiz:view_users_feedback.
-    'block/catquizstatistics:viewdebug' => [
+    'block/catquiz_statistics:viewdebug' => [
         'riskbitmask'  => RISK_PERSONAL,
         'captype'      => 'read',
         'contextlevel' => CONTEXT_COURSE,
@@ -92,7 +92,7 @@ $capabilities = [
 
     // Trigger CSV / JSON / XLSX / ODS exports containing personal data.
     // Additionally enforced: local/catquiz:view_users_feedback.
-    'block/catquizstatistics:export' => [
+    'block/catquiz_statistics:export' => [
         'riskbitmask'  => RISK_PERSONAL,
         'captype'      => 'read',
         'contextlevel' => CONTEXT_COURSE,
@@ -104,7 +104,7 @@ $capabilities = [
 
     // System-wide cross-course aggregation and item analysis (adminreport.php).
     // Additionally enforced: local/catquiz:canmanage.
-    'block/catquizstatistics:viewall' => [
+    'block/catquiz_statistics:viewall' => [
         'captype'      => 'read',
         'contextlevel' => CONTEXT_SYSTEM,
         'archetypes'   => [

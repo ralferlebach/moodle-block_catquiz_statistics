@@ -18,29 +18,28 @@
  * Ad-hoc task for large / system-wide exports.
  *
  * Small course-level exports run synchronously in report.php.
- * Large exports (system-wide Module e, or courses with > configurable threshold
+ * Large exports (system-wide Item & Response Analysis, or courses with > configurable threshold
  * of attempts) are queued as ad-hoc tasks, written to a file area, and linked
  * for download once complete.
  *
- * @package    block_catquizstatistics
+ * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace block_catquizstatistics\task;
+namespace block_catquiz_statistics\task;
 
 /**
  * Ad-hoc export task.
  */
 class export_adhoc_task extends \core\task\adhoc_task {
-
     /**
      * Return a human-readable task name for the admin UI.
      *
      * @return string
      */
     public function get_name(): string {
-        return get_string('pluginname', 'block_catquizstatistics') . ': export';
+        return get_string('pluginname', 'block_catquiz_statistics') . ': export';
     }
 
     /**
@@ -59,7 +58,7 @@ class export_adhoc_task extends \core\task\adhoc_task {
      * @return void
      */
     public function execute(): void {
-        // TODO Phase 1: implement.
-        mtrace('block_catquizstatistics export_adhoc_task: not yet implemented.');
+        // Phase 1: implement export, write to pluginfile area, notify user.
+        mtrace('block_catquiz_statistics export_adhoc_task: not yet implemented.');
     }
 }

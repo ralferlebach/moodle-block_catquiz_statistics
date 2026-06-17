@@ -4,7 +4,7 @@
  * Developer tool: batch-fix PHPDoc @package annotations.
  *
  * Scans all *.php files under the given directory and ensures every file
- * docblock contains the correct @package tag for block_catquizstatistics.
+ * docblock contains the correct @package tag for block_catquiz_statistics.
  *
  * Usage:
  *   php tools/fix_phpdoc.php [<plugin_dir>]
@@ -21,7 +21,7 @@ if (!is_dir($plugindir)) {
     exit(1);
 }
 
-$component = 'block_catquizstatistics';
+$component = 'block_catquiz_statistics';
 $iterator  = new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($plugindir, FilesystemIterator::SKIP_DOTS)
 );
