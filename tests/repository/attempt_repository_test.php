@@ -30,7 +30,6 @@ namespace block_catquiz_statistics\repository;
  * @covers \block_catquiz_statistics\repository\attempt_repository
  */
 final class attempt_repository_test extends \advanced_testcase {
-
     /** @var attempt_repository|null Repository under test. */
     private ?attempt_repository $repo = null;
 

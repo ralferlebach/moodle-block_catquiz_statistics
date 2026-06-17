@@ -37,7 +37,6 @@ use block_catquiz_statistics\repository\attempt_repository;
  * @covers \block_catquiz_statistics\export\base_exporter
  */
 final class attempt_results_exporter_test extends \basic_testcase {
-
     /**
      * Factory creates a valid report object for Test Results.
      *
