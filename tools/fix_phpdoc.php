@@ -15,10 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Developer tool: batch-fix @package annotations in PHP docblocks.
+ * Developer tool: batch-fix package docblock annotations in PHP files.
  *
  * Scans all *.php files under the given directory and ensures every file
- * docblock contains the correct @package tag for block_catquiz_statistics.
+ * docblock contains the correct package tag for block_catquiz_statistics.
  *
  * Run from the command line:
  *   php tools/fix_phpdoc.php [<plugin_dir>]
