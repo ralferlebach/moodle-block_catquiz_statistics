@@ -24,16 +24,15 @@
 
 namespace block_catquiz_statistics\repository;
 
-use advanced_testcase;
-
 /**
  * Tests for attempt_repository.
  *
  * @covers \block_catquiz_statistics\repository\attempt_repository
  */
-final class attempt_repository_test extends advanced_testcase {
-    /** @var attempt_repository */
-    private attempt_repository $repo;
+final class attempt_repository_test extends \advanced_testcase {
+
+    /** @var attempt_repository|null Repository under test. */
+    private ?attempt_repository $repo = null;
 
     /**
      * Set up test environment.
@@ -42,26 +41,32 @@ final class attempt_repository_test extends advanced_testcase {
      */
     protected function setUp(): void {
         parent::setUp();
-        $this->resetAfterTest();
+        $this->resetAfterTest(true);
         $this->repo = new attempt_repository();
     }
 
     /**
-     * Schema check returns false when local_catquiz tables do not exist.
+     * Release resources after each test.
      *
-     * In CI local_catquiz IS installed, so this test documents the contract:
-     * the method returns true when the schema is compatible.
+     * @return void
+     */
+    protected function tearDown(): void {
+        $this->repo = null;
+        parent::tearDown();
+    }
+
+    /**
+     * Schema check returns a boolean reflecting the install state.
      *
      * @return void
      */
     public function test_check_schema_compatibility_reflects_install_state(): void {
         $result = $this->repo->check_schema_compatibility();
-        // Result depends on whether catquiz is installed in the test environment.
         $this->assertIsBool($result);
     }
 
     /**
-     * get_catquiz_instances_for_course returns empty array when no records exist.
+     * get_catquiz_instances_for_course returns empty array without data.
      *
      * @return void
      */
@@ -75,7 +80,7 @@ final class attempt_repository_test extends advanced_testcase {
     }
 
     /**
-     * get_attempts returns empty array when no attempts match the filter.
+     * get_attempts returns empty array without data.
      *
      * @return void
      */
@@ -90,9 +95,7 @@ final class attempt_repository_test extends advanced_testcase {
     }
 
     /**
-     * attempt_filter::from_request builds correct defaults when no params are set.
-     *
-     * Pure unit test — no DB required.
+     * attempt_filter::from_request builds correct defaults.
      *
      * @return void
      */
@@ -118,12 +121,12 @@ final class attempt_repository_test extends advanced_testcase {
     }
 
     /**
-     * get_question_steps_for_attempt returns empty array (QE join stub).
+     * get_question_steps_for_attempt returns empty array (stub).
      *
      * @return void
      */
     public function test_get_question_steps_stub_returns_empty(): void {
         $result = $this->repo->get_question_steps_for_attempt(1);
-        $this->assertSame([], $result, 'QE join stub must return empty array until Phase 2.');
+        $this->assertSame([], $result, 'QE join stub must return empty array.');
     }
 }

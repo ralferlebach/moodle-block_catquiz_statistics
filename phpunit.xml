@@ -2,18 +2,18 @@
 <!--
     PHPUnit configuration for block_catquiz_statistics.
 
-    Registers all *_test.php files in tests/ sub-directories so that
-    moodle-plugin-ci phpunit and the local Makefile target both pick them up
-    without relying on auto-discovery, which behaves differently between
-    PHPUnit versions.
+    bootstrap: path is relative to THIS file's location (blocks/catquiz_statistics/).
+    Two levels up  →  Moodle root  →  lib/phpunit/bootstrap.php
+    This ensures advanced_testcase and all Moodle PHPUnit fixtures are available
+    whether moodle-plugin-ci loads this file directly OR uses the Moodle-root phpunit.xml.
 -->
-<phpunit
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:noNamespaceSchemaLocation="../../../lib/phpunit/phpunit.xsd">
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="../../lib/phpunit/phpunit.xsd"
+         bootstrap="../../lib/phpunit/bootstrap.php">
     <testsuites>
         <testsuite name="block_catquiz_statistics_testsuite">
-            <directory suffix="_test.php">tests/repository</directory>
-            <directory suffix="_test.php">tests/export</directory>
+            <!-- Scans tests/ and all subdirectories for *_test.php files. -->
+            <directory suffix="_test.php">tests</directory>
         </testsuite>
     </testsuites>
 </phpunit>

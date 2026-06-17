@@ -66,7 +66,7 @@ class attempt_repository {
 
         $attempttable = new \xmldb_table('local_catquiz_attempts');
         foreach (['json', 'debug_info', 'instanceid', 'contextid', 'scaleid'] as $col) {
-            if (!$dbman->field_exists($attempttable, $col)) {
+            if (!$dbman->field_exists($attempttable, new \xmldb_field($col))) {
                 return false;
             }
         }

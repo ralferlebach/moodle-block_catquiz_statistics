@@ -150,6 +150,7 @@ class access {
      * @return bool
      */
     public static function is_catquiz_available(): bool {
-        return class_exists('\\local_catquiz\\catquiz');
+        $plugininfo = \core_plugin_manager::instance()->get_plugin_info('local_catquiz');
+        return $plugininfo !== null && $plugininfo->is_enabled() !== false;
     }
 }

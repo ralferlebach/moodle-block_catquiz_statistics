@@ -152,7 +152,7 @@ jobs:
   phpunit:
     name: "PHPUnit (${{ matrix.moodle }} / PHP ${{ matrix.php }} / ${{ matrix.db.engine }})"
     runs-on: ubuntu-24.04
-    needs: [lint-php, lint-js]
+    needs: [lint-php]
     strategy:
       fail-fast: false
       matrix:

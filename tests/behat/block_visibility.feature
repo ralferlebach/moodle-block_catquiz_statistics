@@ -18,19 +18,16 @@ Feature: CAT Quiz Statistics block visibility and access control
       | student1 | C1     | student        |
     And the catquiz_statistics block is added to the "C1" course
 
-  @javascript
   Scenario: Editing teacher sees the CAT Quiz Statistics block
     Given I log in as "teacher1"
     When I am on "C1" course homepage
     Then I should see "CAT Quiz Statistics"
 
-  @javascript
   Scenario: Student does not see the report link in the block
     Given I log in as "student1"
     When I am on "C1" course homepage
     Then the catquiz_statistics report link should not be visible
 
-  @javascript
   Scenario: Editing teacher can follow the report link
     Given I log in as "teacher1"
     When I am on "C1" course homepage

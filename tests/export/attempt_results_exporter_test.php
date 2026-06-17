@@ -17,6 +17,10 @@
 /**
  * PHPUnit tests for exporter_factory and base_exporter.
  *
+ * These tests are pure unit tests: no DB access, no DataGenerator, no global
+ * Moodle state modifications.  They therefore extend \basic_testcase rather
+ * than \advanced_testcase.
+ *
  * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -24,7 +28,6 @@
 
 namespace block_catquiz_statistics\export;
 
-use advanced_testcase;
 use block_catquiz_statistics\repository\attempt_repository;
 
 /**
@@ -33,13 +36,14 @@ use block_catquiz_statistics\repository\attempt_repository;
  * @covers \block_catquiz_statistics\export\exporter_factory
  * @covers \block_catquiz_statistics\export\base_exporter
  */
-final class attempt_results_exporter_test extends advanced_testcase {
+final class attempt_results_exporter_test extends \basic_testcase {
+
     /**
-     * Factory creates a valid report object for module a.
+     * Factory creates a valid report object for Test Results.
      *
      * @return void
      */
-    public function test_factory_creates_module_a_report(): void {
+    public function test_factory_creates_test_results_report(): void {
         $repo   = new attempt_repository();
         $report = exporter_factory::create_report('a', $repo);
         $this->assertSame('a', $report->get_module_id());
@@ -61,7 +65,7 @@ final class attempt_results_exporter_test extends advanced_testcase {
      *
      * @return void
      */
-    public function test_module_a_stub_get_flat_rows_returns_empty(): void {
+    public function test_test_results_stub_get_flat_rows_returns_empty(): void {
         $repo   = new attempt_repository();
         $report = exporter_factory::create_report('a', $repo);
         $filter = new \block_catquiz_statistics\repository\attempt_filter(courseid: 1);
@@ -73,7 +77,7 @@ final class attempt_results_exporter_test extends advanced_testcase {
      *
      * @return void
      */
-    public function test_module_a_stub_get_aggregate_stats_returns_empty(): void {
+    public function test_test_results_stub_get_aggregate_stats_returns_empty(): void {
         $repo   = new attempt_repository();
         $report = exporter_factory::create_report('a', $repo);
         $filter = new \block_catquiz_statistics\repository\attempt_filter(courseid: 1);
