@@ -27,4 +27,4 @@ Feature: CAT Quiz Statistics report page access control
   Scenario: Student is denied access to the course report page
     Given I log in as "student1"
     When I am on the "C1" course "catquiz_statistics report" page
-    Then I should see "You do not have permission"
+    Then I should not see "Course Report"

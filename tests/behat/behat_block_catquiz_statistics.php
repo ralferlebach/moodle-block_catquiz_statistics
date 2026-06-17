@@ -70,6 +70,39 @@ class behat_block_catquiz_statistics extends behat_base {
     }
 
     /**
+     * Navigate to a named catquiz_statistics page within a given course.
+     *
+     * Resolves the course by shortname, builds the URL, and visits it.
+     * This step covers pages that have no built-in Moodle Behat navigation step.
+     *
+     * Supported page identifiers:
+     *   - "catquiz_statistics report"  →  report.php
+     *
+     * @When I am on the :shortname course :reportname page
+     * @param string $shortname  Course shortname.
+     * @param string $reportname Page identifier (see list above).
+     * @return void
+     */
+    public function i_am_on_the_course_report_page(string $shortname, string $reportname): void {
+        global $DB;
+
+        $course = $DB->get_record('course', ['shortname' => $shortname], '*', MUST_EXIST);
+
+        $pageurls = [
+            'catquiz_statistics report' => new moodle_url(
+                '/blocks/catquiz_statistics/report.php',
+                ['courseid' => $course->id]
+            ),
+        ];
+
+        if (!array_key_exists($reportname, $pageurls)) {
+            throw new coding_exception("Unknown page identifier for behat_block_catquiz_statistics: {$reportname}");
+        }
+
+        $this->getSession()->visit($this->locate_path($pageurls[$reportname]->out(false)));
+    }
+
+    /**
      * Assert that the catquiz_statistics block report link is visible.
      *
      * @Then the catquiz_statistics report link should be visible
