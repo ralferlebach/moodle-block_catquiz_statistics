@@ -1,83 +1,117 @@
-## Session-Start – block_catquiz_statistics
+## SESSION-START: CAT Quiz Statistics – block_catquiz_statistics
 
-Du arbeitest an einem Moodle-Block-Plugin. Hier ist der Kontext:
-
----
-
-### Projekt-Steckbrief
-
-| | |
-|---|---|
-| Plugin | `block_catquiz_statistics` (Verzeichnis: `blocks/catquiz_statistics/`) |
-| Moodle | ≥ 4.5 (2024100700); getestet: 4.5, 5.0 |
-| PHP | ≥ 8.1 (readonly, named args, enum) |
-| Autor | Ralf Erlebach, GPL v3 |
-| Haupt-Dependency | local_catquiz v1.1.2 (2024120500), Wunderbyte GmbH |
-| Zweck | Statistiken + Multi-Format-Export für CAT-Quiz-Versuche |
+Du arbeitest als erfahrener Moodle-Architekt und PHP-Entwickler
+an einem laufenden Projekt. Lies zunächst alles, was ich dir gebe,
+bevor du antwortest.
 
 ---
 
-### Aktueller Entwicklungsstand
+### A) Lastenheft, Pflichtenheft und Blueprint
 
-[HIER STAND EINTRAGEN – z.B. "Stub v0.1 komplett, Phase 1 Testergebnisse in Arbeit"]
-
-**Zuletzt abgeschlossen:**
-- [ ] (Eintragen)
-
-**Als nächstes geplant:**
-- [ ] (Eintragen)
+Das aktuelle Dokument liegt im Plugin-Repo:
+  docs/materials/Lastenheft_Pflichtenheft_Blueprint.md
 
 ---
 
-### Schlüssel-Entwurfsentscheidungen (nicht verändern ohne explizite Diskussion)
+### B) Kontext-Dokument der letzten Sitzung
 
-1. **Sieben Capabilities**: addinstance, myaddinstance, view, viewdetails,
-   viewdebug, export, viewall — Details in db/access.php und classes/access.php.
-2. **Duale Capability-Regel**: viewdetails/viewdebug/export verlangen zusätzlich
-   `local/catquiz:view_users_feedback`; viewall verlangt `local/catquiz:canmanage`.
-3. **Repository-Isolation**: Nur `attempt_repository` greift direkt auf
-   local_catquiz-Tabellen zu.  Alle anderen Klassen erhalten typed DTOs.
-4. **`graphicalsummary_data`** ist IMMER in `attempts.json` (nicht in debug_info).
-   `debug_info` liefert nur Zusatzdaten wenn store_debug_info=true.
-5. **STRATEGY_PILOT = 6** ist kein eigener Strategietyp; alle 6 Strategien
-   aktivieren den graphicalsummary-FeedbackGenerator.
-6. **Export**: `\core\dataformat` für single-sheet; Writer-Klasse direkt für
-   Multi-Sheet (8 Blätter, XLSX/ODS).  Keine eigene Writer-Bibliothek.
-7. **Privacy**: metadata\provider nur (MVP).  Upgrade auf plugin\provider wenn
-   Lernangebotsnutzung eigene Tabellen hinzufügt.
-8. **CI**: moodle-ci.yml (non-main, 4 Jobs + Gate) + moodle-release.yml (main,
-   volle Matrix mit --fail-on-warning).  Gate: `ci-complete`.
+Das aktuelle Kontext-Dokument (sessionende der Vorsitzung) ist im Anhang
+zu finden. Ältere Kontext-Dokumente zwecks Referenz: docs/sessions/
 
 ---
 
-### Wichtige Dateipfade
+### C) Aktueller Code
 
-```
-block_catquiz_statistics/
-├── classes/access.php             Capability Guard (statische Methoden)
-├── classes/repository/            EINZIGE DB-Schicht
-│   ├── attempt_filter.php         Filter-VO (PHP 8.1 readonly)
-│   └── attempt_repository.php     JSON-Parsing, Schema-Check
-├── classes/dto/attempt_data.php   DTO (alle Felder)
-├── classes/report/                Auswertungsfunktionen (Interface + Impls)
-├── classes/export/                Exporter (Factory + Test Results)
-├── docs/materials/                Blueprint, Lastenheft, Pflichtenheft
-└── docs/sessions/                 Sitzungsprotokolle
-```
+Der aktuelle Plugin-Stand liegt als Patch-ZIP im Anhang, einzuspielen
+in die Moodle-Installation unter blocks/catquiz_statistics/.
 
----
+Moodle-Installation: moodle45_aliseadele
+PHP: >= 8.1 (readonly properties, named args, enums)
+Moodle: >= 4.5 (2024100700); getestet: 4.5, 5.0
 
-### Laufende Fragen / offene Punkte
-
-[HIER OFFENE FRAGEN EINTRAGEN]
+Haupt-Dependencies:
+  local_catquiz (2024120500)
+  mod_adaptivequiz (wb-0.9.0-rc2)
+  adaptivequizcatmodel_catquiz (1.0.2)
+  local_wunderbyte_table (2024040200)
 
 ---
 
-### Relevante Session-Protokolle
+### D) Ziel dieser Sitzung
 
-- `docs/sessions/session-001.md` — Architektur, Datenmodell, Stub
+Wir knüpfen an die Arbeiten an, die im aktuellen Kontext-Dokument
+und in der angehängten Code-Base vorliegen, und gehen, wenn der letzte
+Arbeitsschritt als vollumfänglich erfüllt angesehen wird, zum nächsten
+vorgesehenen Schritt in der Umsetzung über.
+
+Phasenplan (zur Orientierung):
+  Phase 1 – Testergebnisse (MVP): attempt_repository, Exporter, Report-Seite
+  Phase 2 – Testnutzung + RCI, Testverlauf (QE-Join / graphicalsummary)
+  Phase 3 – Item- und Antwortanalyse, Lernangebotsnutzung (opt-in)
+
+Schlüssel-Entwurfsentscheidungen (nicht verändern ohne explizite Diskussion):
+  1. Sieben Capabilities: addinstance, myaddinstance, view, viewdetails,
+     viewdebug, export, viewall — Details in db/access.php und classes/access.php.
+  2. Duale Capability-Regel: viewdetails/viewdebug/export + local/catquiz:view_users_feedback;
+     viewall + local/catquiz:canmanage.
+  3. Repository-Isolation: Nur attempt_repository greift auf local_catquiz-Tabellen zu.
+  4. graphicalsummary_data ist IMMER in attempts.json (nicht in debug_info).
+  5. STRATEGY_PILOT = 6 ist kein eigener Strategietyp.
+  6. Export: \core\dataformat für single-sheet; Writer-Klasse direkt für Multi-Sheet.
+  7. Privacy: metadata\provider only (MVP).
+  8. CI: --no-init + manuelles init.php; phpunit.xml mit bootstrap-Attribut;
+     Dependency-Tags wb-0.9.0-rc2 / 1.0.2.
+
+Bekannte Stolperfallen (aus CI-Debugging gelernt):
+  - Lang-Dateien: alphabetisch sortiert, keine Kommentar-Trennzeilen
+  - Keine Leerzeile nach öffnender { (Klasse, Methode, Block)
+  - Genau 1 Space nach Komma in Argumentlisten (kein Alignment-Padding)
+  - Inline-Kommentare: Großbuchstabe/Ziffer am Anfang, Satzzeichen am Ende
+  - Keine MOODLE_INTERNAL-Guards in Klassen-Dateien (classes/)
+  - Membervariablen: all lowercase (kein camelCase)
+  - phpunit.xml mit bootstrap="../../lib/phpunit/bootstrap.php"
+  - Behat: keine Permission-Denial-Tests per Browser (look_for_exceptions)
+  - @javascript nur für echte JS-Interaktionen
+  - Multi-Sheet-Export: Writer-Klasse direkt, nicht dataformat::download_data
+  - array<Type> in @param/@return durch moodlecheck nicht vollständig geparst;
+    stattdessen plain array mit Erläuterung im Beschreibungstext verwenden
 
 ---
 
-Bitte lies jetzt `docs/materials/Lastenheft_Pflichtenheft_Blueprint.md` für
-den vollständigen Entwurfskontext, bevor du Änderungen vorschlägst.
+### E) Modus zur Delivery
+
+- Code-Changes immer ausliefern als **Patch-ZIP**: eine ZIP-Datei, die NUR
+  die geänderten Dateien enthält (kein .git-Ordner, keine docs/-Dateien)
+- Patch-ZIPs erhalten einen durchnummerierten Namen (patch-0.X.YY.zip),
+  die Version in version.php orientiert sich am aktuellen Datum und wird
+  mit jeder Iteration hochgezählt (Format: YYYYMMDDNN, z.B. 2026061700)
+- Zu jeder Änderung eine einzeilige Kurzbeschreibung des Commits (englisch)
+  sowie bis zu 5 Stichpunkte zu den vorgenommenen Änderungen.
+  Diese Angaben als MD-Code DIREKT UNTER dem Download-Link der Patch-ZIP
+- Bei der Code-Generierung immer die Moodle-Coding-Standards einhalten:
+    - GPL-Boilerplate-Header in jeder Datei
+    - PHPDoc für alle Klassen, Methoden und Properties
+    - Short array syntax ([] statt array())
+    - Keine Leerzeile nach öffnender {
+    - Multiline-Argumente: jedes Argument auf eigener Zeile
+    - Genau 1 Space nach Komma in Argumentlisten (kein Alignment-Padding)
+    - Inline-Kommentare: Großbuchstabe/Ziffer am Anfang, Punkt/!/? am Ende
+    - Keine MOODLE_INTERNAL-Guards in Klassen-Dateien (classes/)
+    - Membervariablen: all lowercase (kein camelCase)
+    - Lang-Strings: alphabetisch sortiert, keine Kommentar-Trennzeilen
+    - PHPUnit-Tests: basic_testcase ohne DB, advanced_testcase mit DB
+    - @covers-Annotation in jeder Testklasse
+- Author: Ralf Erlebach, Jahr: 2025, Lizenz: GPL v3 or later
+- Bei Unklarheiten und auftretenden Fehlern: Shell-Skripte, SQL-Abfragen
+  und JS-Skripte für die Konsole mitliefern. Diagnose-Skripte werden
+  **grundsätzlich nur im Chat-Fenster** ausgeliefert, nie als Download!
+
+Bevor du beginnst:
+1. Bestätige kurz, was du aus dem Kontext-Dokument und den
+   Dateien verstanden hast.
+2. Benenne, falls vorhanden, Widersprüche oder fehlende
+   Informationen, die du für die heutige Aufgabe brauchst.
+3. Warte dann auf meine Freigabe, bevor du Code schreibst.
+
+Liefere nun eine kurze Einschätzung zu den bevorstehenden Arbeiten
+und den drei Punkten oben!
