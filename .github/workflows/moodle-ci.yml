@@ -7,8 +7,8 @@
 #
 # Dependencies installed before test init:
 #   local_wunderbyte_table          (Wunderbyte-GmbH, branch main)
-#   mod_adaptivequiz                (Wunderbyte fork, branch catmodel_main)
-#   adaptivequizcatmodel_catquiz    (Wunderbyte-GmbH, branch main)
+#   mod_adaptivequiz                (Wunderbyte fork, tag wb-0.9.0-rc2)
+#   adaptivequizcatmodel_catquiz    (Wunderbyte-GmbH, tag 1.0.2)
 #   local_catquiz                   (Wunderbyte-GmbH, branch main)
 #   filter_shortcodes               (branchup, branch master)
 ##############################################################################
@@ -109,9 +109,9 @@ jobs:
         run: |
           moodle-plugin-ci add-plugin --branch main \
             Wunderbyte-GmbH/moodle-local_wunderbyte_table
-          moodle-plugin-ci add-plugin --branch catmodel_main \
+          moodle-plugin-ci add-plugin --branch wb-0.9.0-rc2 \
             Wunderbyte-GmbH/moodle-mod_adaptivequiz
-          moodle-plugin-ci add-plugin --branch main \
+          moodle-plugin-ci add-plugin --branch 1.0.2 \
             Wunderbyte-GmbH/moodle-adaptivequizcatmodel_catquiz
           moodle-plugin-ci add-plugin --branch main \
             Wunderbyte-GmbH/moodle-local_catquiz
@@ -214,9 +214,9 @@ jobs:
         run: |
           moodle-plugin-ci add-plugin --branch main \
             Wunderbyte-GmbH/moodle-local_wunderbyte_table
-          moodle-plugin-ci add-plugin --branch catmodel_main \
+          moodle-plugin-ci add-plugin --branch wb-0.9.0-rc2 \
             Wunderbyte-GmbH/moodle-mod_adaptivequiz
-          moodle-plugin-ci add-plugin --branch main \
+          moodle-plugin-ci add-plugin --branch 1.0.2 \
             Wunderbyte-GmbH/moodle-adaptivequizcatmodel_catquiz
           moodle-plugin-ci add-plugin --branch main \
             Wunderbyte-GmbH/moodle-local_catquiz
@@ -290,9 +290,9 @@ jobs:
         run: |
           moodle-plugin-ci add-plugin --branch main \
             Wunderbyte-GmbH/moodle-local_wunderbyte_table
-          moodle-plugin-ci add-plugin --branch catmodel_main \
+          moodle-plugin-ci add-plugin --branch wb-0.9.0-rc2 \
             Wunderbyte-GmbH/moodle-mod_adaptivequiz
-          moodle-plugin-ci add-plugin --branch main \
+          moodle-plugin-ci add-plugin --branch 1.0.2 \
             Wunderbyte-GmbH/moodle-adaptivequizcatmodel_catquiz
           moodle-plugin-ci add-plugin --branch main \
             Wunderbyte-GmbH/moodle-local_catquiz

@@ -99,9 +99,9 @@ jobs:
         run: |
           moodle-plugin-ci add-plugin --branch main \
             Wunderbyte-GmbH/moodle-local_wunderbyte_table
-          moodle-plugin-ci add-plugin --branch catmodel_main \
+          moodle-plugin-ci add-plugin --branch wb-0.9.0-rc2 \
             Wunderbyte-GmbH/moodle-mod_adaptivequiz
-          moodle-plugin-ci add-plugin --branch main \
+          moodle-plugin-ci add-plugin --branch 1.0.2 \
             Wunderbyte-GmbH/moodle-adaptivequizcatmodel_catquiz
           moodle-plugin-ci add-plugin --branch main \
             Wunderbyte-GmbH/moodle-local_catquiz
