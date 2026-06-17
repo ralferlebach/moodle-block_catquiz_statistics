@@ -1,18 +1,38 @@
-#!/usr/bin/env php
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 /**
- * Developer tool: batch-fix PHPDoc @package annotations.
+ * Developer tool: batch-fix @package annotations in PHP docblocks.
  *
  * Scans all *.php files under the given directory and ensures every file
  * docblock contains the correct @package tag for block_catquiz_statistics.
  *
- * Usage:
+ * Run from the command line:
  *   php tools/fix_phpdoc.php [<plugin_dir>]
  *
  * If <plugin_dir> is omitted, the parent directory of this script is used.
  *
- * NOT shipped with the plugin (excluded in .gitattributes / .phpcsignore).
+ * NOT shipped with the plugin (excluded in .gitattributes export-ignore).
+ *
+ * @package    block_catquiz_statistics
+ * @copyright  2025 Ralf Erlebach
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+// phpcs:disable moodle.Files.MoodleInternal.MoodleInternalGlobalState
 
 $plugindir = $argv[1] ?? dirname(__DIR__);
 
@@ -33,7 +53,6 @@ foreach ($iterator as $file) {
     if ($file->getExtension() !== 'php') {
         continue;
     }
-    // Skip tooling and vendor files.
     $path = $file->getPathname();
     if (
         strpos($path, DIRECTORY_SEPARATOR . 'tools' . DIRECTORY_SEPARATOR) !== false
@@ -44,13 +63,11 @@ foreach ($iterator as $file) {
 
     $content = file_get_contents($path);
 
-    // Already has correct @package.
     if (strpos($content, "@package    {$component}") !== false) {
         ++$skipped;
         continue;
     }
 
-    // Has a @package with wrong value → fix in place.
     $updated = preg_replace(
         '/@package\s+\S+/',
         "@package    {$component}",
