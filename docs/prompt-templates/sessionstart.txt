@@ -1,0 +1,83 @@
+## Session-Start – block_catquizstatistics
+
+Du arbeitest an einem Moodle-Block-Plugin. Hier ist der Kontext:
+
+---
+
+### Projekt-Steckbrief
+
+| | |
+|---|---|
+| Plugin | `block_catquizstatistics` (Verzeichnis: `blocks/catquizstatistics/`) |
+| Moodle | ≥ 4.5 (2024100700); getestet: 4.5, 5.0 |
+| PHP | ≥ 8.1 (readonly, named args, enum) |
+| Autor | Ralf Erlebach, GPL v3 |
+| Haupt-Dependency | local_catquiz v1.1.2 (2024120500), Wunderbyte GmbH |
+| Zweck | Statistiken + Multi-Format-Export für CAT-Quiz-Versuche |
+
+---
+
+### Aktueller Entwicklungsstand
+
+[HIER STAND EINTRAGEN – z.B. "Stub v0.1 komplett, Phase 1 Modul a in Arbeit"]
+
+**Zuletzt abgeschlossen:**
+- [ ] (Eintragen)
+
+**Als nächstes geplant:**
+- [ ] (Eintragen)
+
+---
+
+### Schlüssel-Entwurfsentscheidungen (nicht verändern ohne explizite Diskussion)
+
+1. **Sieben Capabilities**: addinstance, myaddinstance, view, viewdetails,
+   viewdebug, export, viewall — Details in db/access.php und classes/access.php.
+2. **Duale Capability-Regel**: viewdetails/viewdebug/export verlangen zusätzlich
+   `local/catquiz:view_users_feedback`; viewall verlangt `local/catquiz:canmanage`.
+3. **Repository-Isolation**: Nur `attempt_repository` greift direkt auf
+   local_catquiz-Tabellen zu.  Alle anderen Klassen erhalten typed DTOs.
+4. **`graphicalsummary_data`** ist IMMER in `attempts.json` (nicht in debug_info).
+   `debug_info` liefert nur Zusatzdaten wenn store_debug_info=true.
+5. **STRATEGY_PILOT = 6** ist kein eigener Strategietyp; alle 6 Strategien
+   aktivieren den graphicalsummary-FeedbackGenerator.
+6. **Export**: `\core\dataformat` für single-sheet; Writer-Klasse direkt für
+   Multi-Sheet (8 Blätter, XLSX/ODS).  Keine eigene Writer-Bibliothek.
+7. **Privacy**: metadata\provider nur (MVP).  Upgrade auf plugin\provider wenn
+   Modul d eigene Tabellen hinzufügt.
+8. **CI**: moodle-ci.yml (non-main, 4 Jobs + Gate) + moodle-release.yml (main,
+   volle Matrix mit --fail-on-warning).  Gate: `ci-complete`.
+
+---
+
+### Wichtige Dateipfade
+
+```
+block_catquizstatistics/
+├── classes/access.php             Capability Guard (statische Methoden)
+├── classes/repository/            EINZIGE DB-Schicht
+│   ├── attempt_filter.php         Filter-VO (PHP 8.1 readonly)
+│   └── attempt_repository.php     JSON-Parsing, Schema-Check
+├── classes/dto/attempt_data.php   DTO (alle Felder)
+├── classes/report/                Report-Module a–e (Interface + Impls)
+├── classes/export/                Exporter (Factory + Module a)
+├── docs/materials/                Blueprint, Lastenheft, Pflichtenheft
+└── docs/sessions/                 Sitzungsprotokolle
+```
+
+---
+
+### Laufende Fragen / offene Punkte
+
+[HIER OFFENE FRAGEN EINTRAGEN]
+
+---
+
+### Relevante Session-Protokolle
+
+- `docs/sessions/session-001.md` — Architektur, Datenmodell, Stub
+
+---
+
+Bitte lies jetzt `docs/materials/Lastenheft_Pflichtenheft_Blueprint.md` für
+den vollständigen Entwurfskontext, bevor du Änderungen vorschlägst.

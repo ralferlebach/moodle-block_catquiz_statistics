@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    PHPUnit configuration for block_catquizstatistics.
+
+    Registers all *_test.php files in tests/ sub-directories so that
+    moodle-plugin-ci phpunit and the local Makefile target both pick them up
+    without relying on auto-discovery, which behaves differently between
+    PHPUnit versions.
+-->
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/phpunit/phpunit.xsd">
+    <testsuites>
+        <testsuite name="block_catquizstatistics_testsuite">
+            <directory suffix="_test.php">tests/repository</directory>
+            <directory suffix="_test.php">tests/export</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

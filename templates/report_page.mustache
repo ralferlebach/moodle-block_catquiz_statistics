@@ -1,0 +1,29 @@
+{{!
+    @template block_catquizstatistics/report_page
+
+    Full report page for block_catquizstatistics.
+    Used by both report.php (course) and adminreport.php (system-wide).
+
+    Classes required for JS: none.
+    Data attributes required for JS: none.
+
+    Context variables required for this template:
+    * courseid      - integer - Course ID (0 for system-wide report).
+    * heading       - string  - Page heading.
+    * comingsoon    - string  - Placeholder message shown in stub phase.
+    * issystemwide  - boolean - true when rendering the admin report.
+
+    Example context (json):
+    {
+        "courseid": 42,
+        "heading": "CAT Quiz Statistics \u2013 Course Report",
+        "comingsoon": "The detailed report will be available in the next release.",
+        "issystemwide": false
+    }
+}}
+<div class="block-catquizstatistics-report container-fluid mt-3">
+    <h2>{{heading}}</h2>
+    <div class="alert alert-info" role="alert">
+        {{comingsoon}}
+    </div>
+</div>

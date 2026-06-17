@@ -1,0 +1,60 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Factory that maps module IDs to their exporter and report implementations.
+ *
+ * @package    block_catquizstatistics
+ * @copyright  2025 Ralf Erlebach
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+namespace block_catquizstatistics\export;
+
+use block_catquizstatistics\report\report_interface;
+use block_catquizstatistics\repository\attempt_repository;
+
+/**
+ * Creates the correct report + exporter pair for a given module ID.
+ *
+ * Module IDs: 'a' Test Results | 'b' Test Usage | 'c' Test Progress |
+ *             'd' Learning Activity | 'e' Item & Response Analysis
+ */
+class exporter_factory {
+
+    /**
+     * Build a report object for the given module ID.
+     *
+     * @param string             $moduleid  One of 'a'–'e'.
+     * @param attempt_repository $repository Injected repository.
+     * @return report_interface
+     * @throws \coding_exception When the module ID is not recognised.
+     */
+    public static function create_report(
+        string $moduleid,
+        attempt_repository $repository
+    ): report_interface {
+        switch ($moduleid) {
+            case 'a':
+                return new \block_catquizstatistics\report\attempt_results_report($repository);
+            default:
+                throw new \coding_exception(
+                    'Unknown report module id: ' . $moduleid
+                    . '. Modules b–e are not yet implemented.'
+                );
+        }
+    }
+}

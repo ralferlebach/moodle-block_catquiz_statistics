@@ -1,0 +1,17 @@
+/**
+ * Styles for block_catquizstatistics.
+ *
+ * @package    block_catquizstatistics
+ * @copyright  2025 Ralf Erlebach
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+/* Block widget ---------------------------------------------------------- */
+.block-catquizstatistics-widget {
+    padding: 0.25rem 0;
+}
+
+/* Report page ----------------------------------------------------------- */
+.block-catquizstatistics-report {
+    /* Phase 1: tables, filters, charts will be styled here. */
+}

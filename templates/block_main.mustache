@@ -1,0 +1,41 @@
+{{!
+    @template block_catquizstatistics/block_main
+
+    CAT Quiz Statistics block widget.
+
+    Classes required for JS: none.
+    Data attributes required for JS: none.
+
+    Context variables required for this template:
+    * courseid         - integer - ID of the current course.
+    * reporturl        - string  - URL to the course-level report page.
+    * hascatquiz       - boolean - true when local_catquiz is installed.
+    * nocatquizmessage - string  - message shown when catquiz is absent.
+    * canviewall       - boolean - true when user holds viewall capability.
+    * adminreporturl   - string  - URL to the system-wide admin report.
+
+    Example context (json):
+    {
+        "courseid": 42,
+        "reporturl": "/blocks/catquizstatistics/report.php?courseid=42",
+        "hascatquiz": true,
+        "nocatquizmessage": "",
+        "canviewall": false,
+        "adminreporturl": ""
+    }
+}}
+{{#hascatquiz}}
+<div class="block-catquizstatistics-widget">
+    <a href="{{{reporturl}}}" class="btn btn-sm btn-primary d-block mb-1">
+        {{#str}}viewreport, block_catquizstatistics{{/str}}
+    </a>
+    {{#canviewall}}
+    <a href="{{{adminreporturl}}}" class="btn btn-sm btn-secondary d-block">
+        {{#str}}viewadminreport, block_catquizstatistics{{/str}}
+    </a>
+    {{/canviewall}}
+</div>
+{{/hascatquiz}}
+{{^hascatquiz}}
+<p class="text-muted small">{{nocatquizmessage}}</p>
+{{/hascatquiz}}
