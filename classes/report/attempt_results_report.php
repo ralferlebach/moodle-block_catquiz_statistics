@@ -184,13 +184,9 @@ class attempt_results_report implements report_interface {
         if (empty($dtos)) {
             return [];
         }
+        $allstats = $this->compute_pp_stats($dtos);
         $rows = [];
-        foreach ($this->activescaleids as $scaleid) {
-            $ppvalues = [];
-            foreach ($dtos as $dto) {
-                $ppvalues[] = $dto->personabilities[$scaleid] ?? null;
-            }
-            $stats = statistics_helper::descriptive($ppvalues);
+        foreach ($allstats as $scaleid => $stats) {
             $row = [
                 'scale_id' => $scaleid,
                 'scale_name' => $this->activescalenames[$scaleid] ?? ('Scale ' . $scaleid),
@@ -262,15 +258,7 @@ class attempt_results_report implements report_interface {
         if (empty($dtos)) {
             return [];
         }
-        $stats = [];
-        foreach ($this->activescaleids as $scaleid) {
-            $ppvalues = [];
-            foreach ($dtos as $dto) {
-                $ppvalues[] = $dto->personabilities[$scaleid] ?? null;
-            }
-            $stats[$scaleid] = statistics_helper::descriptive($ppvalues);
-        }
-        return $stats;
+        return $this->compute_pp_stats($dtos);
     }
 
     /**
@@ -373,6 +361,27 @@ class attempt_results_report implements report_interface {
      */
     public function get_active_scale_ids(): array {
         return $this->activescaleids;
+    }
+
+    /**
+     * Compute descriptive statistics for person abilities (PP) per active scale.
+     *
+     * Shared implementation used by get_scale_summary_rows() and
+     * get_aggregate_stats() to avoid duplicated code.
+     *
+     * @param attempt_data[] $dtos Hydrated attempt DTOs.
+     * @return array<int,array> Scale ID => descriptive stats array.
+     */
+    private function compute_pp_stats(array $dtos): array {
+        $stats = [];
+        foreach ($this->activescaleids as $scaleid) {
+            $ppvalues = [];
+            foreach ($dtos as $dto) {
+                $ppvalues[] = $dto->personabilities[$scaleid] ?? null;
+            }
+            $stats[$scaleid] = statistics_helper::descriptive($ppvalues);
+        }
+        return $stats;
     }
 
     /**

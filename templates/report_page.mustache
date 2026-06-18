@@ -1,29 +1,145 @@
 {{!
     @template block_catquiz_statistics/report_page
 
-    Full report page for block_catquiz_statistics.
-    Used by both report.php (course) and adminreport.php (system-wide).
+    Course-level CAT quiz statistics report page.
+    Rendered by report.php; data prepared by \block_catquiz_statistics\output\report_page.
 
     Classes required for JS: none.
     Data attributes required for JS: none.
 
     Context variables required for this template:
-    * courseid      - integer - Course ID (0 for system-wide report).
-    * heading       - string  - Page heading.
-    * comingsoon    - string  - Placeholder message shown in stub phase.
-    * issystemwide  - boolean - true when rendering the admin report.
+    * courseid        - integer - Course ID.
+    * reporturl       - string  - Base URL of report.php.
+    * heading         - string  - Page heading.
+    * schemaerror     - bool    - True if local_catquiz is not installed.
+    * schemaerrortext - string  - Schema missing message (only when schemaerror).
+    * filterlabel     - string  - "Filter" label.
+    * instancelabel   - string  - Instance dropdown label.
+    * startdatelabel  - string  - Start date label.
+    * enddatelabel    - string  - End date label.
+    * applylabel      - string  - Apply button label.
+    * instanceoptions - array   - [{value, label, selected}] for instance dropdown.
+    * startdate       - string  - Current start date value (YYYY-MM-DD).
+    * enddate         - string  - Current end date value (YYYY-MM-DD).
+    * attemptcountlabel - string - "Attempts found:" label.
+    * attemptcount    - integer - Number of rows in table.
+    * hasrows         - bool    - True when table has at least one row.
+    * noattemptsmsg   - string  - No-results message.
+    * tableheaders    - array   - [{label}] column headers.
+    * tablerows       - array   - [{cells: [{v}]}] table body.
+    * exportcsvlabel  - string  - CSV export button label.
+    * exportexcellabel - string - Excel export button label.
+    * exportcsvurl    - string  - CSV export URL.
+    * exportexcelurl  - string  - Excel export URL.
 
     Example context (json):
     {
         "courseid": 42,
-        "heading": "CAT Quiz Statistics \u2013 Course Report",
-        "comingsoon": "The detailed report will be available in the next release.",
-        "issystemwide": false
+        "reporturl": "/blocks/catquiz_statistics/report.php",
+        "heading": "CAT Quiz Statistics",
+        "schemaerror": false,
+        "schemaerrortext": "",
+        "filterlabel": "Filter",
+        "instancelabel": "CAT Quiz instance",
+        "startdatelabel": "From date",
+        "enddatelabel": "To date",
+        "applylabel": "Apply filter",
+        "instanceoptions": [{"value": "0", "label": "(all instances)", "selected": true}],
+        "startdate": "",
+        "enddate": "",
+        "attemptcountlabel": "Attempts found:",
+        "attemptcount": 0,
+        "hasrows": false,
+        "noattemptsmsg": "No attempts match the current filter.",
+        "tableheaders": [{"label": "Name"}],
+        "tablerows": [],
+        "exportcsvlabel": "Export CSV",
+        "exportexcellabel": "Export Excel (8 sheets)",
+        "exportcsvurl": "/blocks/catquiz_statistics/report.php?courseid=42&export=csv",
+        "exportexcelurl": "/blocks/catquiz_statistics/report.php?courseid=42&export=excel"
     }
 }}
 <div class="block-catquiz-statistics-report container-fluid mt-3">
+
     <h2>{{heading}}</h2>
-    <div class="alert alert-info" role="alert">
-        {{comingsoon}}
+
+    {{#schemaerror}}
+    <div class="alert alert-warning" role="alert">{{schemaerrortext}}</div>
+    {{/schemaerror}}
+
+    {{^schemaerror}}
+
+    {{! Filter form }}
+    <div class="card mb-4">
+        <div class="card-header">{{filterlabel}}</div>
+        <div class="card-body">
+            <form method="get" action="{{reporturl}}">
+                <input type="hidden" name="courseid" value="{{courseid}}">
+                <div class="form-row align-items-end">
+                    <div class="form-group col-md-4">
+                        <label>{{instancelabel}}</label>
+                        <select name="instanceid" class="form-control form-control-sm">
+                            {{#instanceoptions}}
+                            <option value="{{value}}"{{#selected}} selected{{/selected}}>{{label}}</option>
+                            {{/instanceoptions}}
+                        </select>
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>{{startdatelabel}}</label>
+                        <input type="date" name="startdate" value="{{startdate}}"
+                               class="form-control form-control-sm">
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label>{{enddatelabel}}</label>
+                        <input type="date" name="enddate" value="{{enddate}}"
+                               class="form-control form-control-sm">
+                    </div>
+                    <div class="form-group col-md-2">
+                        <button type="submit" class="btn btn-primary btn-sm btn-block">
+                            {{applylabel}}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
+
+    {{! Result count + export buttons }}
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-muted">{{attemptcountlabel}} <strong>{{attemptcount}}</strong></span>
+        <div>
+            <a href="{{exportcsvurl}}" class="btn btn-outline-secondary btn-sm mr-1">
+                {{exportcsvlabel}}
+            </a>
+            <a href="{{exportexcelurl}}" class="btn btn-outline-secondary btn-sm">
+                {{exportexcellabel}}
+            </a>
+        </div>
+    </div>
+
+    {{! Attempts table }}
+    {{#hasrows}}
+    <div class="table-responsive">
+        <table class="table table-sm table-striped table-hover">
+            <thead class="thead-light">
+                <tr>
+                    {{#tableheaders}}<th scope="col">{{label}}</th>{{/tableheaders}}
+                </tr>
+            </thead>
+            <tbody>
+                {{#tablerows}}
+                <tr>
+                    {{#cells}}<td>{{v}}</td>{{/cells}}
+                </tr>
+                {{/tablerows}}
+            </tbody>
+        </table>
+    </div>
+    {{/hasrows}}
+    {{^hasrows}}
+    <div class="alert alert-info mt-3" role="alert">{{noattemptsmsg}}</div>
+    {{/hasrows}}
+
+    {{/schemaerror}}
+
 </div>

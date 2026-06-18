@@ -42,7 +42,6 @@ use block_catquiz_statistics\repository\attempt_filter;
  * Test Results exporter — overrides export_multisheet() with 8 named sheets.
  */
 class attempt_results_exporter extends base_exporter {
-
     /**
      * Write 8 named sheets to the XLSX or ODS writer.
      *
@@ -122,10 +121,10 @@ class attempt_results_exporter extends base_exporter {
 
         // Sheets 4-7: subscale pivots.
         $pivots = [
-            'pp'   => get_string('report:sheet_subscale_scores', $plugin),
-            'se'   => get_string('report:sheet_subscale_se',     $plugin),
-            'n'    => get_string('report:sheet_subscale_n',      $plugin),
-            'frac' => get_string('report:sheet_subscale_frac',   $plugin),
+            'pp' => get_string('report:sheet_subscale_scores', $plugin),
+            'se' => get_string('report:sheet_subscale_se', $plugin),
+            'n' => get_string('report:sheet_subscale_n', $plugin),
+            'frac' => get_string('report:sheet_subscale_frac', $plugin),
         ];
         $pivcols = $report->get_subscale_pivot_columns();
         foreach ($pivots as $metric => $sheettitle) {
@@ -170,17 +169,17 @@ class attempt_results_exporter extends base_exporter {
             'value' => 'Value',
         ];
         $rows = [
-            ['key' => 'Plugin',       'value' => 'block_catquiz_statistics'],
-            ['key' => 'Export date',  'value' => date('Y-m-d H:i:s')],
-            ['key' => 'Format',       'value' => $format],
-            ['key' => 'Course ID',    'value' => $filter->courseid],
-            ['key' => 'Instance ID',  'value' => $filter->instanceid ?? '(all)'],
-            ['key' => 'Scale ID',     'value' => $filter->scaleid ?? '(all)'],
+            ['key' => 'Plugin', 'value' => 'block_catquiz_statistics'],
+            ['key' => 'Export date', 'value' => date('Y-m-d H:i:s')],
+            ['key' => 'Format', 'value' => $format],
+            ['key' => 'Course ID', 'value' => $filter->courseid],
+            ['key' => 'Instance ID', 'value' => $filter->instanceid ?? '(all)'],
+            ['key' => 'Scale ID', 'value' => $filter->scaleid ?? '(all)'],
             ['key' => 'Start filter', 'value' => $filter->starttime !== null
                 ? date('Y-m-d H:i:s', $filter->starttime) : '(no filter)'],
-            ['key' => 'End filter',   'value' => $filter->endtime !== null
+            ['key' => 'End filter', 'value' => $filter->endtime !== null
                 ? date('Y-m-d H:i:s', $filter->endtime) : '(no filter)'],
-            ['key' => 'Attempts',     'value' => $attemptcount],
+            ['key' => 'Attempts', 'value' => $attemptcount],
         ];
         return [$cols, $rows];
     }
