@@ -18,14 +18,14 @@
  * Exporter for Test Results with 8-sheet multi-sheet XLSX/ODS output.
  *
  * Sheet order:
- *   1. attempts_raw     – fixed columns, no subscale expansion
- *   2. scale_summary    – aggregate descriptive stats per scale
- *   3. attempts_wide    – full flat/wide with all subscale columns
- *   4. subscale_scores  – pivot: attempt x scale, PP values
- *   5. subscale_se      – pivot: attempt x scale, SE values (null = invalid)
- *   6. subscale_n       – pivot: attempt x scale, item counts
- *   7. subscale_frac    – pivot: attempt x scale, fraction correct
- *   8. metadata         – export parameters and scale hierarchy
+ *   1. attempts_raw     - fixed columns, no subscale expansion
+ *   2. scale_summary    - aggregate descriptive stats per scale
+ *   3. attempts_wide    - full flat/wide with all subscale columns
+ *   4. subscale_scores  - pivot: attempt x scale, PP values
+ *   5. subscale_se      - pivot: attempt x scale, SE values (null = invalid)
+ *   6. subscale_n       - pivot: attempt x scale, item counts
+ *   7. subscale_frac    - pivot: attempt x scale, fraction correct
+ *   8. metadata         - export parameters and scale hierarchy
  *
  * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
@@ -43,11 +43,16 @@ use block_catquiz_statistics\repository\attempt_filter;
  */
 class attempt_results_exporter extends base_exporter {
     /**
-     * Write 8 named sheets to the XLSX or ODS writer.
+     * Write 8 named sheets using the Moodle 4.5 dataformat API.
      *
-     * Uses \core\dataformat::get_format_instance() (available since Moodle 4.3)
-     * to obtain a writer that supports multi-sheet output. Sheets beyond the
-     * configured maxsheets limit are silently omitted.
+     * Correct call sequence (Moodle 4.5 spout_base):
+     *   1. set_filename()        - store filename (no extension needed here)
+     *   2. send_http_headers()   - send Content-Type/-Disposition AND
+     *                              initialise $this->writer in spout_base
+     *   3. start_output()        - no-op in spout_base but conventional
+     *   4. For each sheet:
+     *      set_sheettitle()  -> start_sheet($cols)  -> write_record() * N
+     *   5. close_output()        - no arguments; finalises and sends file
      *
      * Falls back to single-sheet export when $report is not an
      * attempt_results_report (e.g. future report modules).
@@ -69,6 +74,10 @@ class attempt_results_exporter extends base_exporter {
             return;
         }
 
+        // Raise time limit and close session (matching download_data() behaviour).
+        \core_php_time_limit::raise();
+        \core\session\manager::write_close();
+
         $maxsheets = (int) get_config('block_catquiz_statistics', 'maxsheets') ?: 50;
         $plugin = 'block_catquiz_statistics';
 
@@ -76,46 +85,45 @@ class attempt_results_exporter extends base_exporter {
         $widerows = $report->get_flat_rows($filter);
         $widecols = $report->get_columns();
 
-        $writer = \core\dataformat::get_format_instance($format);
-        $writer->set_filename($filename);
-        $writer->start_output();
+        // Initialise the dataformat writer.
+        $fmt = \core\dataformat::get_format_instance($format);
+        $fmt->set_filename($filename);
+        $fmt->send_http_headers();
+        $fmt->start_output();
 
         $sheetnum = 0;
 
         // Sheet 1: attempts_raw.
         if ($sheetnum < $maxsheets) {
-            $writer->set_sheettitle(get_string('report:sheet_attempts_raw', $plugin));
+            $fmt->set_sheettitle(get_string('report:sheet_attempts_raw', $plugin));
             $rawcols = $report->get_fixed_columns();
             $rawrows = $report->get_raw_rows($filter);
-            $writer->start_sheet($rawcols);
+            $fmt->start_sheet($rawcols);
             foreach ($rawrows as $i => $row) {
-                $writer->write_record($row, $i);
+                $fmt->write_record($row, $i);
             }
-            $writer->close_sheet($rawcols);
             $sheetnum++;
         }
 
         // Sheet 2: scale_summary.
         if ($sheetnum < $maxsheets) {
-            $writer->set_sheettitle(get_string('report:sheet_scale_summary', $plugin));
+            $fmt->set_sheettitle(get_string('report:sheet_scale_summary', $plugin));
             $sumcols = $report->get_scale_summary_columns();
             $sumrows = $report->get_scale_summary_rows($filter);
-            $writer->start_sheet($sumcols);
+            $fmt->start_sheet($sumcols);
             foreach ($sumrows as $i => $row) {
-                $writer->write_record($row, $i);
+                $fmt->write_record($row, $i);
             }
-            $writer->close_sheet($sumcols);
             $sheetnum++;
         }
 
         // Sheet 3: attempts_wide.
         if ($sheetnum < $maxsheets) {
-            $writer->set_sheettitle(get_string('report:sheet_attempts_wide', $plugin));
-            $writer->start_sheet($widecols);
+            $fmt->set_sheettitle(get_string('report:sheet_attempts_wide', $plugin));
+            $fmt->start_sheet($widecols);
             foreach ($widerows as $i => $row) {
-                $writer->write_record($row, $i);
+                $fmt->write_record($row, $i);
             }
-            $writer->close_sheet($widecols);
             $sheetnum++;
         }
 
@@ -131,28 +139,27 @@ class attempt_results_exporter extends base_exporter {
             if ($sheetnum >= $maxsheets) {
                 break;
             }
-            $writer->set_sheettitle($sheettitle);
+            $fmt->set_sheettitle($sheettitle);
             $pivrows = $report->get_subscale_pivot_rows($filter, $metric);
-            $writer->start_sheet($pivcols);
+            $fmt->start_sheet($pivcols);
             foreach ($pivrows as $i => $row) {
-                $writer->write_record($row, $i);
+                $fmt->write_record($row, $i);
             }
-            $writer->close_sheet($pivcols);
             $sheetnum++;
         }
 
         // Sheet 8: metadata.
         if ($sheetnum < $maxsheets) {
-            $writer->set_sheettitle(get_string('report:sheet_metadata', $plugin));
+            $fmt->set_sheettitle(get_string('report:sheet_metadata', $plugin));
             [$metacols, $metarows] = $this->build_metadata($filter, $format, count($widerows));
-            $writer->start_sheet($metacols);
+            $fmt->start_sheet($metacols);
             foreach ($metarows as $i => $row) {
-                $writer->write_record($row, $i);
+                $fmt->write_record($row, $i);
             }
-            $writer->close_sheet($metacols);
         }
 
-        $writer->close_output('download');
+        // Finalise and send the file (no arguments in Moodle 4.5).
+        $fmt->close_output();
     }
 
     /**
@@ -168,6 +175,10 @@ class attempt_results_exporter extends base_exporter {
             'key' => 'Key',
             'value' => 'Value',
         ];
+        $startval = $filter->starttime !== null
+            ? date('Y-m-d H:i:s', $filter->starttime) : '(no filter)';
+        $endval = $filter->endtime !== null
+            ? date('Y-m-d H:i:s', $filter->endtime) : '(no filter)';
         $rows = [
             ['key' => 'Plugin', 'value' => 'block_catquiz_statistics'],
             ['key' => 'Export date', 'value' => date('Y-m-d H:i:s')],
@@ -175,10 +186,8 @@ class attempt_results_exporter extends base_exporter {
             ['key' => 'Course ID', 'value' => $filter->courseid],
             ['key' => 'Instance ID', 'value' => $filter->instanceid ?? '(all)'],
             ['key' => 'Scale ID', 'value' => $filter->scaleid ?? '(all)'],
-            ['key' => 'Start filter', 'value' => $filter->starttime !== null
-                ? date('Y-m-d H:i:s', $filter->starttime) : '(no filter)'],
-            ['key' => 'End filter', 'value' => $filter->endtime !== null
-                ? date('Y-m-d H:i:s', $filter->endtime) : '(no filter)'],
+            ['key' => 'Start filter', 'value' => $startval],
+            ['key' => 'End filter', 'value' => $endval],
             ['key' => 'Attempts', 'value' => $attemptcount],
         ];
         return [$cols, $rows];

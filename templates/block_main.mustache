@@ -2,17 +2,26 @@
     @template block_catquiz_statistics/block_main
 
     CAT Quiz Statistics block widget.
+    Shows attempt and instance counts, links to course and system-wide reports.
 
     Classes required for JS: none.
     Data attributes required for JS: none.
 
     Context variables required for this template:
-    * courseid         - integer - ID of the current course.
-    * reporturl        - string  - URL to the course-level report page.
-    * hascatquiz       - boolean - true when local_catquiz is installed.
-    * nocatquizmessage - string  - message shown when catquiz is absent.
-    * canviewall       - boolean - true when user holds viewall capability.
-    * adminreporturl   - string  - URL to the system-wide admin report.
+    * courseid            - integer - ID of the current course.
+    * reporturl           - string  - URL to the course-level report page.
+    * hascatquiz          - boolean - true when local_catquiz is installed.
+    * nocatquizmessage    - string  - message shown when catquiz is absent.
+    * canviewall          - boolean - true when user holds viewall capability.
+    * adminreporturl      - string  - URL to the system-wide admin report.
+    * attemptcount        - integer - total attempts in this course.
+    * instancecount       - integer - number of CAT quiz instances.
+    * hasattempts         - boolean - true when attemptcount > 0.
+    * attemptsummary      - string  - "Attempts" label.
+    * instancesummary     - string  - "Active tests" label.
+    * neattemptsmsg       - string  - "No attempts yet" message.
+    * viewreportlabel     - string  - "View report" label.
+    * viewadminreportlabel - string - "System report" label.
 
     Example context (json):
     {
@@ -21,19 +30,49 @@
         "hascatquiz": true,
         "nocatquizmessage": "",
         "canviewall": false,
-        "adminreporturl": ""
+        "adminreporturl": "",
+        "attemptcount": 113,
+        "instancecount": 3,
+        "hasattempts": true,
+        "attemptsummary": "Attempts",
+        "instancesummary": "Active tests",
+        "neattemptsmsg": "No attempts yet.",
+        "viewreportlabel": "View report",
+        "viewadminreportlabel": "System report"
     }
 }}
 {{#hascatquiz}}
 <div class="block-catquiz-statistics-widget">
+
+    {{! Summary stats }}
+    {{#hasattempts}}
+    <table class="table table-sm table-borderless mb-2">
+        <tbody>
+            <tr>
+                <td class="text-muted py-0">{{attemptsummary}}</td>
+                <td class="font-weight-bold py-0 text-right">{{attemptcount}}</td>
+            </tr>
+            <tr>
+                <td class="text-muted py-0">{{instancesummary}}</td>
+                <td class="font-weight-bold py-0 text-right">{{instancecount}}</td>
+            </tr>
+        </tbody>
+    </table>
+    {{/hasattempts}}
+    {{^hasattempts}}
+    <p class="text-muted small mb-2">{{neattemptsmsg}}</p>
+    {{/hasattempts}}
+
+    {{! Action buttons }}
     <a href="{{{reporturl}}}" class="btn btn-sm btn-primary d-block mb-1">
-        {{#str}}viewreport, block_catquiz_statistics{{/str}}
+        {{viewreportlabel}}
     </a>
     {{#canviewall}}
     <a href="{{{adminreporturl}}}" class="btn btn-sm btn-secondary d-block">
-        {{#str}}viewadminreport, block_catquiz_statistics{{/str}}
+        {{viewadminreportlabel}}
     </a>
     {{/canviewall}}
+
 </div>
 {{/hascatquiz}}
 {{^hascatquiz}}

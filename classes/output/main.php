@@ -17,6 +17,9 @@
 /**
  * Renderable for the block_catquiz_statistics widget.
  *
+ * Shows a compact summary (attempt count, instance count) plus links to
+ * the course report and, for managers, the system-wide admin report.
+ *
  * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -50,15 +53,23 @@ class main implements renderable, templatable {
     /** @var string URL to adminreport.php (empty if not allowed). */
     private string $adminreporturl;
 
+    /** @var int Total number of attempts in the course. */
+    private int $attemptcount;
+
+    /** @var int Number of distinct CAT quiz instances in the course. */
+    private int $instancecount;
+
     /**
      * Constructor.
      *
-     * @param int    $courseid         Course ID.
-     * @param string $reporturl        URL to report.php.
-     * @param bool   $hascatquiz       Whether local_catquiz is available.
+     * @param int $courseid Course ID.
+     * @param string $reporturl URL to report.php.
+     * @param bool $hascatquiz Whether local_catquiz is available.
      * @param string $nocatquizmessage Message shown when catquiz is absent.
-     * @param bool   $canviewall       Whether user has viewall capability.
-     * @param string $adminreporturl   URL to adminreport.php (empty if not allowed).
+     * @param bool $canviewall Whether user has viewall capability.
+     * @param string $adminreporturl URL to adminreport.php (empty if not allowed).
+     * @param int $attemptcount Total attempts in the course.
+     * @param int $instancecount Number of distinct instances in the course.
      */
     public function __construct(
         int $courseid,
@@ -66,14 +77,18 @@ class main implements renderable, templatable {
         bool $hascatquiz,
         string $nocatquizmessage,
         bool $canviewall,
-        string $adminreporturl
+        string $adminreporturl,
+        int $attemptcount = 0,
+        int $instancecount = 0
     ) {
-        $this->courseid         = $courseid;
-        $this->reporturl        = $reporturl;
-        $this->hascatquiz       = $hascatquiz;
+        $this->courseid = $courseid;
+        $this->reporturl = $reporturl;
+        $this->hascatquiz = $hascatquiz;
         $this->nocatquizmessage = $nocatquizmessage;
-        $this->canviewall       = $canviewall;
-        $this->adminreporturl   = $adminreporturl;
+        $this->canviewall = $canviewall;
+        $this->adminreporturl = $adminreporturl;
+        $this->attemptcount = $attemptcount;
+        $this->instancecount = $instancecount;
     }
 
     /**
@@ -83,13 +98,22 @@ class main implements renderable, templatable {
      * @return array<string,mixed>
      */
     public function export_for_template(renderer_base $output): array {
+        $plugin = 'block_catquiz_statistics';
         return [
-            'courseid'          => $this->courseid,
-            'reporturl'         => $this->reporturl,
-            'hascatquiz'        => $this->hascatquiz,
-            'nocatquizmessage'  => $this->nocatquizmessage,
-            'canviewall'        => $this->canviewall,
-            'adminreporturl'    => $this->adminreporturl,
+            'courseid' => $this->courseid,
+            'reporturl' => $this->reporturl,
+            'hascatquiz' => $this->hascatquiz,
+            'nocatquizmessage' => $this->nocatquizmessage,
+            'canviewall' => $this->canviewall,
+            'adminreporturl' => $this->adminreporturl,
+            'attemptcount' => $this->attemptcount,
+            'instancecount' => $this->instancecount,
+            'hasattempts' => $this->attemptcount > 0,
+            'attemptsummary' => get_string('block:attempts', $plugin),
+            'instancesummary' => get_string('block:instances', $plugin),
+            'neattemptsmsg' => get_string('block:noattempts', $plugin),
+            'viewreportlabel' => get_string('viewreport', $plugin),
+            'viewadminreportlabel' => get_string('viewadminreport', $plugin),
         ];
     }
 }

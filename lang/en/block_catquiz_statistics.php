@@ -25,6 +25,9 @@
 defined('MOODLE_INTERNAL') || die();
 $string['adminreport:comingsoon'] = 'The system-wide item and response analysis will be available in a future release.';
 $string['adminreporttitle'] = 'CAT Quiz Statistics – System Report';
+$string['block:attempts'] = 'Attempts';
+$string['block:instances'] = 'Active tests';
+$string['block:noattempts'] = 'No attempts recorded yet.';
 $string['block_catquiz_statistics:addinstance'] = 'Add CAT Quiz Statistics block';
 $string['block_catquiz_statistics:export'] = 'Export statistics data';
 $string['block_catquiz_statistics:myaddinstance'] = 'Add CAT Quiz Statistics block to My Moodle';

@@ -212,10 +212,13 @@ class report_page implements renderable, templatable {
             $duration = $mins > 0 ? $mins . ' min ' . $rem . ' s' : $rem . ' s';
         }
 
-        // PP and SE — formatted to 2 decimal places, or '-' / 'n/v' for null.
+        // PP and SE — formatted to 2 decimal places, or '-' /  'n/v' for null.
+        // Catquiz often stores no SE for the root scale; fall back to primary_se.
         $globalpp = isset($row['global_pp']) && $row['global_pp'] !== null
             ? number_format((float) $row['global_pp'], 2) : '-';
-        $globalse = isset($row['global_se']) && $row['global_se'] !== null
+        // SE is stored in attempts.json under the global (root) scale ID.
+        // 'n/v' means SE validation (semax threshold) filtered the value.
+        $globalse = $row['global_se'] !== null
             ? number_format((float) $row['global_se'], 2) : 'n/v';
 
         return [

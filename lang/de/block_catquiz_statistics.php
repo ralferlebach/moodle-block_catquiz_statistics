@@ -25,6 +25,9 @@
 defined('MOODLE_INTERNAL') || die();
 $string['adminreport:comingsoon'] = 'Die systemweite Item- und Antwortanalyse steht in einer späteren Version zur Verfügung.';
 $string['adminreporttitle'] = 'CAT-Quiz-Statistik – Systembericht';
+$string['block:attempts'] = 'Versuche';
+$string['block:instances'] = 'Aktive Tests';
+$string['block:noattempts'] = 'Noch keine Versuche vorhanden.';
 $string['block_catquiz_statistics:addinstance'] = 'CAT-Quiz-Statistik-Block hinzufügen';
 $string['block_catquiz_statistics:export'] = 'Statistikdaten exportieren';
 $string['block_catquiz_statistics:myaddinstance'] = 'CAT-Quiz-Statistik-Block zu Moodle-Startseite hinzufügen';

@@ -58,6 +58,7 @@ class attempt_repository {
             'local_catquiz_catscales',
             'local_catquiz_personparams',
             'adaptivequiz_attempt',
+            'adaptivequiz',
         ];
         foreach ($required as $table) {
             if (!$dbman->table_exists(new \xmldb_table($table))) {
@@ -77,9 +78,9 @@ class attempt_repository {
     /**
      * Return all mod_adaptivequiz instances that use catquiz in a course.
      *
-     * Queries local_catquiz_attempts to find all distinct instanceids active in
-     * the course, then enriches with test name and scale name from
-     * local_catquiz_tests and local_catquiz_catscales.
+     * Joins directly with {adaptivequiz} to get the activity's real name as
+     * configured by the teacher.  The local_catquiz_tests name is a template
+     * name (e.g. "Benutzerdefinierter Test") and is not suitable for display.
      *
      * @param int $courseid Course ID.
      * @return array Array of stdClass with fields: instanceid, catscaleid, testname, catscalename, attemptcount.
@@ -93,31 +94,22 @@ class attempt_repository {
 
         $sql = 'SELECT a.instanceid, a.scaleid,'
              . '       COUNT(a.id) AS attemptcount,'
-             . '       t.name AS testname,'
+             . '       aq.name AS testname,'
              . '       cs.name AS catscalename'
              . '  FROM {local_catquiz_attempts} a'
-             . '  LEFT JOIN {local_catquiz_tests} t'
-             . '         ON t.componentid = a.instanceid'
-             . '        AND t.component   = :component'
-             . '        AND t.status      = :tstatus'
+             . '  JOIN {adaptivequiz} aq ON aq.id = a.instanceid'
              . '  LEFT JOIN {local_catquiz_catscales} cs ON cs.id = a.scaleid'
              . ' WHERE a.courseid = :courseid'
-             . ' GROUP BY a.instanceid, a.scaleid, t.name, cs.name'
-             . ' ORDER BY a.instanceid ASC';
+             . ' GROUP BY a.instanceid, a.scaleid, aq.name, cs.name'
+             . ' ORDER BY aq.name ASC, a.instanceid ASC';
 
-        $params = [
-            'courseid'  => $courseid,
-            'component' => 'mod_adaptivequiz',
-            'tstatus'   => 1,
-        ];
-
-        $rows = $DB->get_records_sql($sql, $params);
+        $rows = $DB->get_records_sql($sql, ['courseid' => $courseid]);
         $result = [];
         foreach ($rows as $row) {
             $result[] = (object) [
-                'instanceid'   => (int) $row->instanceid,
-                'catscaleid'   => (int) $row->scaleid,
-                'testname'     => $row->testname ?? '',
+                'instanceid' => (int) $row->instanceid,
+                'catscaleid' => (int) $row->scaleid,
+                'testname' => $row->testname ?? '',
                 'catscalename' => $row->catscalename ?? '',
                 'attemptcount' => (int) $row->attemptcount,
             ];

@@ -124,6 +124,17 @@ class block_catquiz_statistics extends block_base {
             ? (new moodle_url('/blocks/catquiz_statistics/adminreport.php'))->out(false)
             : '';
 
+        // Fetch summary stats (only when schema is available).
+        $repo = new \block_catquiz_statistics\repository\attempt_repository();
+        $instances = [];
+        if ($hascatquiz && $repo->check_schema_compatibility()) {
+            $instances = $repo->get_catquiz_instances_for_course($courseid);
+        }
+        $totalattempts = 0;
+        foreach ($instances as $inst) {
+            $totalattempts += (int) $inst->attemptcount;
+        }
+
         $main = new \block_catquiz_statistics\output\main(
             courseid: $courseid,
             reporturl: $reporturl,
@@ -131,6 +142,8 @@ class block_catquiz_statistics extends block_base {
             nocatquizmessage: $hascatquiz ? '' : get_string('nocatquiz', 'block_catquiz_statistics'),
             canviewall: $canviewall,
             adminreporturl: $adminreporturl,
+            attemptcount: $totalattempts,
+            instancecount: count($instances),
         );
 
         $this->content->text = $OUTPUT->render_from_template(
