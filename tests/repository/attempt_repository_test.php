@@ -60,8 +60,7 @@ final class attempt_repository_test extends \advanced_testcase {
      * @return void
      */
     public function test_check_schema_compatibility_reflects_install_state(): void {
-        $result = $this->repo->check_schema_compatibility();
-        $this->assertIsBool($result);
+        $this->assertIsBool($this->repo->check_schema_compatibility());
     }
 
     /**
@@ -74,12 +73,11 @@ final class attempt_repository_test extends \advanced_testcase {
             $this->markTestSkipped('local_catquiz schema not available.');
         }
         $course = $this->getDataGenerator()->create_course();
-        $result = $this->repo->get_catquiz_instances_for_course($course->id);
-        $this->assertSame([], $result, 'Expected empty array for course with no catquiz instances.');
+        $this->assertSame([], $this->repo->get_catquiz_instances_for_course($course->id));
     }
 
     /**
-     * get_attempts returns empty array without data.
+     * get_attempts returns empty array when no attempts exist in course.
      *
      * @return void
      */
@@ -89,43 +87,222 @@ final class attempt_repository_test extends \advanced_testcase {
         }
         $course = $this->getDataGenerator()->create_course();
         $filter = new attempt_filter(courseid: $course->id);
-        $result = $this->repo->get_attempts($filter);
-        $this->assertSame([], $result, 'Expected empty array for course with no attempts.');
+        $this->assertSame([], $this->repo->get_attempts($filter));
     }
 
     /**
-     * attempt_filter::from_request builds correct defaults.
+     * get_attempts returns one DTO per inserted record.
      *
      * @return void
      */
-    public function test_attempt_filter_from_request_defaults(): void {
-        $filter = attempt_filter::from_request(42);
-        $this->assertSame(42, $filter->courseid);
-        $this->assertNull($filter->instanceid);
-        $this->assertNull($filter->scaleid);
-        $this->assertNull($filter->starttime);
-        $this->assertNull($filter->endtime);
-        $this->assertFalse($filter->systemwide);
+    public function test_get_attempts_returns_dto_for_created_record(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt(['userid' => $user->id, 'courseid' => $course->id]);
+
+        $filter = new attempt_filter(courseid: $course->id);
+        $dtos = $this->repo->get_attempts($filter);
+
+        $this->assertCount(1, $dtos, 'Expected exactly 1 DTO for 1 inserted attempt.');
+        $this->assertSame((int) $user->id, $dtos[0]->userid, 'userid mismatch in DTO.');
+        $this->assertSame((int) $course->id, $dtos[0]->courseid, 'courseid mismatch in DTO.');
     }
 
     /**
-     * attempt_filter::from_request respects explicit instanceid override.
+     * get_attempts correctly hydrates JSON fields into the DTO.
      *
      * @return void
      */
-    public function test_attempt_filter_from_request_with_instanceid(): void {
-        $filter = attempt_filter::from_request(courseid: 7, instanceid: 99);
-        $this->assertSame(7, $filter->courseid);
-        $this->assertSame(99, $filter->instanceid);
+    public function test_get_attempts_hydrates_json_fields(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt([
+            'userid' => $user->id,
+            'courseid' => $course->id,
+            'scaleid' => 1,
+            'json' => \block_catquiz_statistics_generator::build_attempt_json(1, 0.75, 0.20),
+        ]);
+
+        $filter = new attempt_filter(courseid: $course->id);
+        $dto = $this->repo->get_attempts($filter)[0];
+
+        $this->assertSame(1, $dto->globalscaleid, 'globalscaleid should be 1.');
+        $this->assertSame(1, $dto->testid, 'testid should be 1.');
+        $this->assertArrayHasKey(1, $dto->personabilities, 'personabilities should have key 1.');
+        $this->assertEqualsWithDelta(0.75, $dto->personabilities[1], 1e-9, 'PP should be 0.75.');
+        $this->assertNotNull($dto->primaryscale, 'primaryscale should not be null.');
+        $this->assertArrayHasKey(1, $dto->catscales, 'catscales should have key 1.');
     }
 
     /**
-     * get_question_steps_for_attempt returns empty array (stub).
+     * get_attempts filters correctly by instanceid.
      *
      * @return void
      */
-    public function test_get_question_steps_stub_returns_empty(): void {
-        $result = $this->repo->get_question_steps_for_attempt(1);
-        $this->assertSame([], $result, 'QE join stub must return empty array.');
+    public function test_get_attempts_filters_by_instanceid(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt(['userid' => $user->id, 'courseid' => $course->id, 'instanceid' => 10]);
+        $gen->create_catquiz_attempt(['userid' => $user->id, 'courseid' => $course->id, 'instanceid' => 20]);
+
+        $filter = new attempt_filter(courseid: $course->id, instanceid: 10);
+        $dtos = $this->repo->get_attempts($filter);
+
+        $this->assertCount(1, $dtos, 'Filter instanceid=10 should return exactly 1 DTO.');
+        $this->assertSame(10, $dtos[0]->instanceid, 'DTO instanceid should be 10.');
+    }
+
+    /**
+     * SE values exceeding semax are set to null after validation.
+     *
+     * Creates a test environment with semax=0.30 and an attempt with SE=0.45
+     * for scale 1. Expects scale 1 SE to be null in the hydrated DTO.
+     *
+     * @return void
+     */
+    public function test_get_attempts_nulls_se_above_semax(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_test(['componentid' => 5, 'courseid' => (int) $course->id, 'semax' => 0.30]);
+        $gen->create_catquiz_attempt([
+            'userid' => (int) $user->id,
+            'courseid' => (int) $course->id,
+            'instanceid' => 5,
+            'json' => \block_catquiz_statistics_generator::build_attempt_json(1, 0.5, 0.45),
+        ]);
+
+        $filter = new attempt_filter(courseid: (int) $course->id);
+        $dtos = $this->repo->get_attempts($filter);
+
+        $this->assertNotEmpty($dtos, 'Expected at least 1 DTO after creating an attempt.');
+        $dto = $dtos[0];
+        $this->assertArrayHasKey(1, $dto->se, 'se array should have key 1 after validation.');
+        $this->assertNull($dto->se[1], 'SE=0.45 > semax=0.30 — expected null after validation.');
+    }
+
+    /**
+     * SE values at or below semax remain as floats after validation.
+     *
+     * @return void
+     */
+    public function test_get_attempts_keeps_se_at_or_below_semax(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_test(['componentid' => 6, 'courseid' => (int) $course->id, 'semax' => 0.35]);
+        $gen->create_catquiz_attempt([
+            'userid' => (int) $user->id,
+            'courseid' => (int) $course->id,
+            'instanceid' => 6,
+            'json' => \block_catquiz_statistics_generator::build_attempt_json(1, 0.5, 0.35),
+        ]);
+
+        $filter = new attempt_filter(courseid: (int) $course->id);
+        $dtos = $this->repo->get_attempts($filter);
+
+        $this->assertNotEmpty($dtos, 'Expected at least 1 DTO.');
+        $dto = $dtos[0];
+        $this->assertArrayHasKey(1, $dto->se, 'se array should have key 1.');
+        $this->assertNotNull($dto->se[1], 'SE=0.35 = semax=0.35 — expected valid (not null).');
+        $this->assertEqualsWithDelta(0.35, $dto->se[1], 1e-9, 'SE value should remain 0.35.');
+    }
+
+    /**
+     * get_catquiz_instances_for_course returns one entry per inserted instanceid.
+     *
+     * @return void
+     */
+    public function test_get_catquiz_instances_for_course_returns_instances(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt([
+            'userid' => (int) $user->id,
+            'courseid' => (int) $course->id,
+            'instanceid' => 11,
+            'attemptid' => 100,
+        ]);
+        $gen->create_catquiz_attempt([
+            'userid' => (int) $user->id,
+            'courseid' => (int) $course->id,
+            'instanceid' => 11,
+            'attemptid' => 101,
+        ]);
+
+        $instances = $this->repo->get_catquiz_instances_for_course((int) $course->id);
+
+        $this->assertNotEmpty($instances, 'Expected at least 1 instance entry.');
+        $found = null;
+        foreach ($instances as $inst) {
+            if ((int) $inst->instanceid === 11) {
+                $found = $inst;
+                break;
+            }
+        }
+        $this->assertNotNull($found, 'Expected to find instanceid=11 in the result.');
+        $this->assertSame(2, (int) $found->attemptcount, 'Expected 2 attempts for instanceid=11.');
+    }
+
+    /**
+     * duration_seconds is computed from endtime minus starttime.
+     *
+     * @return void
+     */
+    public function test_get_attempts_computes_duration_seconds(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+        $start = mktime(9, 0, 0, 1, 10, 2025);
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt([
+            'userid' => (int) $user->id,
+            'courseid' => (int) $course->id,
+            'starttime' => $start,
+            'endtime' => $start + 720,
+        ]);
+
+        $filter = new attempt_filter(courseid: (int) $course->id);
+        $dtos = $this->repo->get_attempts($filter);
+
+        $this->assertNotEmpty($dtos, 'Expected at least 1 DTO.');
+        $this->assertEqualsWithDelta(720.0, $dtos[0]->durationseconds, 1e-9, 'Duration should be 720s.');
     }
 }

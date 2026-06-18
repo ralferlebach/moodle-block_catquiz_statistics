@@ -33,6 +33,32 @@
  */
 class block_catquiz_statistics_generator extends testing_block_generator {
     /**
+     * Build a default attempts.json payload for testing.
+     *
+     * Used by create_catquiz_attempt() and can be overridden via the json override key.
+     *
+     * @param int $scaleid Global scale ID.
+     * @param float $pp Person ability.
+     * @param float $se Standard error.
+     * @return string JSON-encoded payload.
+     */
+    public static function build_attempt_json(
+        int $scaleid = 1,
+        float $pp = 0.5,
+        float $se = 0.3
+    ): string {
+        return json_encode([
+            'catscaleid'      => $scaleid,
+            'testid'          => 1,
+            'personabilities' => [$scaleid => $pp],
+            'se'              => [$scaleid => $se],
+            'primaryscale'    => (object) ['id' => $scaleid, 'name' => 'TestScale'],
+            'catscales'       => [$scaleid => (object) ['name' => 'TestScale']],
+            'graphicalsummary_data' => [],
+        ]);
+    }
+
+    /**
      * Insert a minimal local_catquiz_attempts record for testing.
      *
      * The json payload mimics a real attempt with personabilities, se and a
@@ -46,42 +72,95 @@ class block_catquiz_statistics_generator extends testing_block_generator {
 
         if (!$DB->get_manager()->table_exists('local_catquiz_attempts')) {
             throw new coding_exception(
-                'local_catquiz is not installed. ' .
-                'Guard with markTestSkipped() when local_catquiz is absent.'
+                'local_catquiz is not installed. '
+                . 'Guard with markTestSkipped() when local_catquiz is absent.'
             );
         }
 
         $defaults = [
-            'userid'                      => 2,
-            'scaleid'                     => 1,
-            'contextid'                   => 1,
-            'courseid'                    => 1,
-            'attemptid'                   => 1,
-            'component'                   => 'mod_adaptivequiz',
-            'instanceid'                  => 1,
-            'teststrategy'                => 1,
-            'status'                      => 1,
-            'total_number_of_testitems'   => 20,
-            'number_of_testitems_used'    => 8,
+            'userid'                       => 2,
+            'scaleid'                      => 1,
+            'contextid'                    => 1,
+            'courseid'                     => 1,
+            'attemptid'                    => 1,
+            'component'                    => 'mod_adaptivequiz',
+            'instanceid'                   => 1,
+            'teststrategy'                 => 1,
+            'status'                       => 1,
+            'total_number_of_testitems'    => 20,
+            'number_of_testitems_used'     => 8,
             'personability_before_attempt' => 0.0,
             'personability_after_attempt'  => 0.5,
-            'starttime'                   => time() - 600,
-            'endtime'                     => time(),
-            'json'                        => json_encode([
-                'catscaleid'     => 1,
-                'testid'         => 1,
-                'personabilities' => [1 => 0.5],
-                'se'             => [1 => 0.3],
-                'primaryscale'   => (object) ['id' => 1, 'name' => 'TestScale'],
-                'catscales'      => [1 => (object) ['name' => 'TestScale']],
-                'graphicalsummary_data' => [],
-            ]),
-            'debug_info'  => null,
-            'timecreated' => time(),
-            'timemodified' => time(),
+            'starttime'                    => time() - 600,
+            'endtime'                      => time(),
+            'json'                         => self::build_attempt_json(),
+            'debug_info'                   => null,
+            'timecreated'                  => time(),
+            'timemodified'                 => time(),
         ];
 
         $record = array_merge($defaults, $overrides);
         return $DB->insert_record('local_catquiz_attempts', (object) $record);
+    }
+
+    /**
+     * Insert a local_catquiz_tests record for testing.
+     *
+     * Creates a test environment record matching the given instanceid, with
+     * configurable SE and N-min thresholds so that SE validity tests can
+     * exercise all code paths.
+     *
+     * @param array $overrides Field overrides; 'semax' and 'nminscale' are
+     *   convenience shortcuts for the nested JSON keys.
+     * @return int Inserted record id.
+     */
+    public function create_catquiz_test(array $overrides = []): int {
+        global $DB;
+
+        if (!$DB->get_manager()->table_exists('local_catquiz_tests')) {
+            throw new coding_exception(
+                'local_catquiz is not installed. '
+                . 'Guard with markTestSkipped() when local_catquiz is absent.'
+            );
+        }
+
+        $semax = $overrides['semax'] ?? null;
+        $nminscale = $overrides['nminscale'] ?? null;
+        unset($overrides['semax'], $overrides['nminscale']);
+
+        $settingsjson = json_encode((object) [
+            'catquiz_catscales'            => 1,
+            'catquiz_selectteststrategy'   => 1,
+            'catquiz_standarderrorgroup'   => (object) [
+                'catquiz_standarderror_min' => '0.01',
+                'catquiz_standarderror_max' => $semax !== null ? (string) $semax : '0.50',
+            ],
+            'maxquestionsscalegroup' => (object) [
+                'catquiz_maxquestionspersubscale' => 20,
+                'catquiz_minquestionspersubscale' => $nminscale !== null ? (int) $nminscale : 0,
+            ],
+            'maxquestionsgroup' => (object) [
+                'catquiz_maxquestions' => 40,
+                'catquiz_minquestions' => 3,
+            ],
+        ]);
+
+        $defaults = [
+            'parentid'          => 0,
+            'componentid'       => 1,
+            'component'         => 'mod_adaptivequiz',
+            'catscaleid'        => 1,
+            'courseid'          => 1,
+            'name'              => 'Test CAT environment',
+            'description'       => '',
+            'descriptionformat' => 1,
+            'json'              => $settingsjson,
+            'status'            => 1,
+            'timecreated'       => time(),
+            'timemodified'      => time(),
+        ];
+
+        $record = array_merge($defaults, $overrides);
+        return $DB->insert_record('local_catquiz_tests', (object) $record);
     }
 }

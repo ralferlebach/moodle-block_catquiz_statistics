@@ -34,6 +34,7 @@
 namespace block_catquiz_statistics\repository;
 
 use block_catquiz_statistics\dto\attempt_data;
+use block_catquiz_statistics\local\se_validator;
 
 /**
  * Repository for CAT quiz attempt data.
@@ -76,37 +77,161 @@ class attempt_repository {
     /**
      * Return all mod_adaptivequiz instances that use catquiz in a course.
      *
-     * Stub — returns empty array until Phase 1 implementation.
+     * Queries local_catquiz_attempts to find all distinct instanceids active in
+     * the course, then enriches with test name and scale name from
+     * local_catquiz_tests and local_catquiz_catscales.
      *
      * @param int $courseid Course ID.
-     * @return array Array of stdClass with fields: instanceid, name, catscaleid, catscalename, attemptcount.
+     * @return array Array of stdClass with fields: instanceid, catscaleid, testname, catscalename, attemptcount.
      */
     public function get_catquiz_instances_for_course(int $courseid): array {
-        return [];
+        global $DB;
+
+        if (!$this->check_schema_compatibility()) {
+            return [];
+        }
+
+        $sql = 'SELECT a.instanceid, a.scaleid,'
+             . '       COUNT(a.id) AS attemptcount,'
+             . '       t.name AS testname,'
+             . '       cs.name AS catscalename'
+             . '  FROM {local_catquiz_attempts} a'
+             . '  LEFT JOIN {local_catquiz_tests} t'
+             . '         ON t.componentid = a.instanceid'
+             . '        AND t.component   = :component'
+             . '        AND t.status      = :tstatus'
+             . '  LEFT JOIN {local_catquiz_catscales} cs ON cs.id = a.scaleid'
+             . ' WHERE a.courseid = :courseid'
+             . ' GROUP BY a.instanceid, a.scaleid, t.name, cs.name'
+             . ' ORDER BY a.instanceid ASC';
+
+        $params = [
+            'courseid'  => $courseid,
+            'component' => 'mod_adaptivequiz',
+            'tstatus'   => 1,
+        ];
+
+        $rows = $DB->get_records_sql($sql, $params);
+        $result = [];
+        foreach ($rows as $row) {
+            $result[] = (object) [
+                'instanceid'   => (int) $row->instanceid,
+                'catscaleid'   => (int) $row->scaleid,
+                'testname'     => $row->testname ?? '',
+                'catscalename' => $row->catscalename ?? '',
+                'attemptcount' => (int) $row->attemptcount,
+            ];
+        }
+        return $result;
     }
 
     /**
      * Return attempt rows matching the filter, hydrated as attempt_data DTOs.
      *
-     * Stub — returns empty array until Phase 1 implementation.
+     * Join path: local_catquiz_attempts + {user}.
+     * Quiz settings (SE thresholds) are loaded separately per unique instanceid
+     * from local_catquiz_tests to keep the main SQL simple.
+     * SE validity is applied via se_validator::validate().
      *
      * @param attempt_filter $filter Query scope.
-     * @return attempt_data[]
+     * @return attempt_data[] Hydrated DTOs ordered by starttime DESC.
      */
     public function get_attempts(attempt_filter $filter): array {
-        return [];
+        global $DB;
+
+        if (!$this->check_schema_compatibility()) {
+            return [];
+        }
+
+        $sql = 'SELECT a.id, a.userid, u.username, u.firstname, u.lastname, u.email,'
+             . '       a.scaleid, a.contextid, a.courseid, a.attemptid, a.instanceid,'
+             . '       a.teststrategy, a.status,'
+             . '       a.total_number_of_testitems, a.number_of_testitems_used,'
+             . '       a.personability_before_attempt, a.personability_after_attempt,'
+             . '       a.starttime, a.endtime, a.json'
+             . '  FROM {local_catquiz_attempts} a'
+             . '  JOIN {user} u ON u.id = a.userid'
+             . ' WHERE 1=1';
+
+        $params = [];
+
+        if (!$filter->systemwide) {
+            $sql .= ' AND a.courseid = :courseid';
+            $params['courseid'] = $filter->courseid;
+        }
+        if ($filter->instanceid !== null) {
+            $sql .= ' AND a.instanceid = :instanceid';
+            $params['instanceid'] = $filter->instanceid;
+        }
+        if ($filter->scaleid !== null) {
+            $sql .= ' AND a.scaleid = :scaleid';
+            $params['scaleid'] = $filter->scaleid;
+        }
+        if ($filter->starttime !== null) {
+            $sql .= ' AND a.starttime >= :starttime';
+            $params['starttime'] = $filter->starttime;
+        }
+        if ($filter->endtime !== null) {
+            $sql .= ' AND a.starttime <= :endtime';
+            $params['endtime'] = $filter->endtime;
+        }
+
+        $sql .= ' ORDER BY a.starttime DESC, a.id DESC';
+
+        $records = $DB->get_records_sql($sql, $params);
+        if (empty($records)) {
+            return [];
+        }
+
+        // Load quiz settings once per unique instanceid.
+        $instanceids = array_unique(
+            array_map(static fn($r) => (int) $r->instanceid, array_values($records))
+        );
+        $quizsettings = $this->load_quizsettings($instanceids);
+
+        $dtos = [];
+        foreach ($records as $record) {
+            $dtos[] = $this->hydrate_attempt(
+                $record,
+                $quizsettings[(int) $record->instanceid] ?? null
+            );
+        }
+        return $dtos;
     }
 
     /**
      * Return a single attempt including full JSON and graphicalsummary parsing.
      *
-     * Stub — not yet implemented.
-     *
      * @param int $attemptid local_catquiz_attempts.id (not adaptivequiz_attempt.id).
-     * @return attempt_data|null
+     * @return attempt_data|null Null when the record does not exist.
      */
     public function get_attempt_with_detail(int $attemptid): ?attempt_data {
-        return null;
+        global $DB;
+
+        if (!$this->check_schema_compatibility()) {
+            return null;
+        }
+
+        $sql = 'SELECT a.id, a.userid, u.username, u.firstname, u.lastname, u.email,'
+             . '       a.scaleid, a.contextid, a.courseid, a.attemptid, a.instanceid,'
+             . '       a.teststrategy, a.status,'
+             . '       a.total_number_of_testitems, a.number_of_testitems_used,'
+             . '       a.personability_before_attempt, a.personability_after_attempt,'
+             . '       a.starttime, a.endtime, a.json'
+             . '  FROM {local_catquiz_attempts} a'
+             . '  JOIN {user} u ON u.id = a.userid'
+             . ' WHERE a.id = :id';
+
+        $record = $DB->get_record_sql($sql, ['id' => $attemptid]);
+        if (!$record) {
+            return null;
+        }
+
+        $quizsettings = $this->load_quizsettings([(int) $record->instanceid]);
+        return $this->hydrate_attempt(
+            $record,
+            $quizsettings[(int) $record->instanceid] ?? null
+        );
     }
 
     /**
@@ -128,8 +253,7 @@ class attempt_repository {
      *   adaptivequiz_attempt.uniqueid
      *   -> question_attempts.questionusageid
      *   -> question_attempt_steps.questionattemptid   (fraction, timecreated)
-     *   -> question_attempt_step_data.attemptstepid   (name, value – response options)
-     *   -> question_attempts.questionid               (joined for rightanswer, responsesummary)
+     *   -> question_attempt_step_data.attemptstepid   (name, value)
      *
      * Requires setting block_catquiz_statistics/enableqejoin = 1.
      *
@@ -140,6 +264,159 @@ class attempt_repository {
      */
     public function get_question_steps_for_attempt(int $adaptiveattemptid): array {
         return [];
+    }
+
+    /**
+     * Load quiz settings (json column) from local_catquiz_tests for given instance IDs.
+     *
+     * Returns the most recent active test record per instanceid.
+     * ORDER BY id DESC ensures the most recently inserted record is processed
+     * first; the first match per instanceid wins.
+     *
+     * @param int[] $instanceids mod_adaptivequiz instance IDs to query.
+     * @return array<int,object> Decoded settings objects keyed by instanceid.
+     */
+    private function load_quizsettings(array $instanceids): array {
+        global $DB;
+
+        if (empty($instanceids)) {
+            return [];
+        }
+
+        [$insql, $inparams] = $DB->get_in_or_equal($instanceids, SQL_PARAMS_NAMED, 'inst');
+        $inparams['component'] = 'mod_adaptivequiz';
+        $inparams['tstatus']   = 1;
+
+        $sql = 'SELECT id, componentid, json'
+             . '  FROM {local_catquiz_tests}'
+             . ' WHERE componentid ' . $insql
+             . '   AND component = :component'
+             . '   AND status    = :tstatus'
+             . ' ORDER BY id DESC';
+
+        $rows     = $DB->get_records_sql($sql, $inparams);
+        $settings = [];
+        foreach ($rows as $row) {
+            $iid = (int) $row->componentid;
+            if (!isset($settings[$iid])) {
+                $decoded = json_decode($row->json);
+                if (is_object($decoded)) {
+                    $settings[$iid] = $decoded;
+                }
+            }
+        }
+        return $settings;
+    }
+
+    /**
+     * Hydrate a single DB record into a fully parsed attempt_data DTO.
+     *
+     * Applies SE validity filtering via se_validator using thresholds extracted
+     * from the quiz settings for this attempt's instance.
+     *
+     * @param object $record Raw DB row from get_attempts() SQL.
+     * @param object|null $quizsettings Decoded local_catquiz_tests.json for this instance.
+     * @return attempt_data Hydrated DTO.
+     */
+    private function hydrate_attempt(object $record, ?object $quizsettings): attempt_data {
+        $dto = new attempt_data();
+
+        $dto->id        = (int) $record->id;
+        $dto->userid = (int) $record->userid;
+        $dto->username = $record->username ?? null;
+        $dto->firstname = $record->firstname ?? null;
+        $dto->lastname = $record->lastname ?? null;
+        $dto->email = $record->email ?? null;
+
+        $dto->scaleid = isset($record->scaleid) ? (int) $record->scaleid : null;
+        $dto->contextid = isset($record->contextid) ? (int) $record->contextid : null;
+        $dto->courseid = isset($record->courseid) ? (int) $record->courseid : null;
+        $dto->attemptid = (int) $record->attemptid;
+        $dto->instanceid = isset($record->instanceid) ? (int) $record->instanceid : null;
+
+        $dto->teststrategy = isset($record->teststrategy) ? (int) $record->teststrategy : null;
+        $dto->status = isset($record->status) ? (int) $record->status : null;
+        $dto->totaltestitems = isset($record->total_number_of_testitems)
+            ? (int) $record->total_number_of_testitems : null;
+        $dto->usedtestitems = isset($record->number_of_testitems_used)
+            ? (int) $record->number_of_testitems_used : null;
+
+        $dto->personabilitybeforeattempt = isset($record->personability_before_attempt)
+            ? (float) $record->personability_before_attempt : null;
+        $dto->personabilityafterattempt = isset($record->personability_after_attempt)
+            ? (float) $record->personability_after_attempt : null;
+
+        $dto->starttime = isset($record->starttime) ? (int) $record->starttime : null;
+        $dto->endtime = isset($record->endtime) ? (int) $record->endtime : null;
+        $dto->durationseconds = ($dto->endtime && $dto->starttime)
+            ? (float) ($dto->endtime - $dto->starttime) : null;
+
+        // Parse attempts.json payload.
+        $json = $this->parse_attempt_json($record->json ?? null);
+        if ($json !== null) {
+            $dto->globalscaleid = isset($json->catscaleid) ? (int) $json->catscaleid : null;
+            $dto->testid = isset($json->testid) ? (int) $json->testid : null;
+            $dto->primaryscale = $json->primaryscale ?? null;
+            $dto->catscales = $this->extract_catscales($json->catscales ?? null);
+            $dto->graphicalsummary = $this->extract_graphicalsummary($json);
+
+            // Personabilities can appear under two key names depending on catquiz version.
+            $rawpa = $json->personabilities ?? $json->personabilities_abilities ?? null;
+            $dto->personabilities = $this->extract_float_map($rawpa);
+
+            // SE: extract raw values then apply validity filters.
+            $rawse = $this->extract_float_map($json->se ?? null);
+            $thresholds = se_validator::extract_thresholds($quizsettings);
+            $dto->se = se_validator::validate(
+                $rawse,
+                $dto->graphicalsummary,
+                $thresholds['nminscale'],
+                $thresholds['semax']
+            );
+        }
+
+        return $dto;
+    }
+
+    /**
+     * Convert a JSON object or array with numeric string keys to array<int,float>.
+     *
+     * JSON encodes object keys as strings (e.g. "1": 0.5); this method casts
+     * them back to integers so callers can use $map[$scaleid] directly.
+     *
+     * @param mixed $input Decoded JSON object, array, or null.
+     * @return array<int,float> Keyed by integer scale ID.
+     */
+    private function extract_float_map($input): array {
+        if (!is_object($input) && !is_array($input)) {
+            return [];
+        }
+        $result = [];
+        foreach ((array) $input as $key => $value) {
+            if (is_numeric($key) && is_numeric($value)) {
+                $result[(int) $key] = (float) $value;
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Convert the catscales JSON object to array<int,object>.
+     *
+     * @param mixed $input Decoded JSON catscales object or null.
+     * @return array<int,object> Scale metadata keyed by integer scale ID.
+     */
+    private function extract_catscales($input): array {
+        if (!is_object($input) && !is_array($input)) {
+            return [];
+        }
+        $result = [];
+        foreach ((array) $input as $key => $scale) {
+            if (is_numeric($key) && is_object($scale)) {
+                $result[(int) $key] = $scale;
+            }
+        }
+        return $result;
     }
 
     /**
@@ -170,7 +447,7 @@ class attempt_repository {
      * Extract graphicalsummary_data from attempts.json.
      *
      * graphicalsummary_data is always present in attempts.json when the
-     * graphicalsummary feedbackgenerator ran for that strategy.  It is NOT
+     * graphicalsummary feedbackgenerator ran for that strategy. It is NOT
      * gated by the store_debug_info setting (that only controls debug_info col).
      *
      * Each entry contains: id, questionname, lastresponse (fraction), difficulty,
@@ -198,8 +475,10 @@ class attempt_repository {
                 'difficulty'       => isset($entry->difficulty) ? (float) $entry->difficulty : null,
                 'questionscale'    => $entry->questionscale ?? null,
                 'questionscalename' => $entry->questionscale_name ?? '',
-                'fisherinformation' => isset($entry->fisherinformation) ? (float) $entry->fisherinformation : null,
-                'personabilityafter' => isset($entry->personability_after) ? (float) $entry->personability_after : null,
+                'fisherinformation' => isset($entry->fisherinformation)
+                    ? (float) $entry->fisherinformation : null,
+                'personabilityafter' => isset($entry->personability_after)
+                    ? (float) $entry->personability_after : null,
             ];
         }
         return $steps;

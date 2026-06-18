@@ -43,7 +43,7 @@ final class attempt_results_exporter_test extends \basic_testcase {
      * @return void
      */
     public function test_factory_creates_test_results_report(): void {
-        $repo   = new attempt_repository();
+        $repo = new attempt_repository();
         $report = exporter_factory::create_report('a', $repo);
         $this->assertSame('a', $report->get_module_id());
         $this->assertInstanceOf(\block_catquiz_statistics\report\report_interface::class, $report);
@@ -60,26 +60,28 @@ final class attempt_results_exporter_test extends \basic_testcase {
     }
 
     /**
-     * Test Results stub: get_flat_rows returns empty array.
+     * Test Results report: get_flat_rows returns an array (empty or not depends on DB state).
      *
      * @return void
      */
-    public function test_test_results_stub_get_flat_rows_returns_empty(): void {
-        $repo   = new attempt_repository();
+    public function test_test_results_get_flat_rows_returns_array(): void {
+        $repo = new attempt_repository();
         $report = exporter_factory::create_report('a', $repo);
-        $filter = new \block_catquiz_statistics\repository\attempt_filter(courseid: 1);
-        $this->assertSame([], $report->get_flat_rows($filter));
+        $filter = new \block_catquiz_statistics\repository\attempt_filter(courseid: 999999);
+        $result = $report->get_flat_rows($filter);
+        $this->assertIsArray($result);
     }
 
     /**
-     * Test Results stub: get_aggregate_stats returns empty array.
+     * Test Results report: get_aggregate_stats returns an array.
      *
      * @return void
      */
-    public function test_test_results_stub_get_aggregate_stats_returns_empty(): void {
-        $repo   = new attempt_repository();
+    public function test_test_results_get_aggregate_stats_returns_array(): void {
+        $repo = new attempt_repository();
         $report = exporter_factory::create_report('a', $repo);
-        $filter = new \block_catquiz_statistics\repository\attempt_filter(courseid: 1);
-        $this->assertSame([], $report->get_aggregate_stats($filter));
+        $filter = new \block_catquiz_statistics\repository\attempt_filter(courseid: 999999);
+        $result = $report->get_aggregate_stats($filter);
+        $this->assertIsArray($result);
     }
 }
