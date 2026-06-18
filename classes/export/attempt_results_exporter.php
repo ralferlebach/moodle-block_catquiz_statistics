@@ -208,6 +208,7 @@ class attempt_results_exporter extends base_exporter {
      * @param array $cols Column key => header label map.
      * @param array $rows Data rows.
      * @param Style $headerstyle Style applied to the header row.
+     * @param array|null $groupheader Optional group-header row written above the column header.
      * @return void
      */
     private function write_sheet(
