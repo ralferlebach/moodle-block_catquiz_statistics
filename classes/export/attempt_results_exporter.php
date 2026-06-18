@@ -42,6 +42,7 @@ use block_catquiz_statistics\report\attempt_results_report;
 use block_catquiz_statistics\report\report_interface;
 use block_catquiz_statistics\repository\attempt_filter;
 use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Style\Color;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Writer\XLSX\Writer as XLSXWriter;
 use OpenSpout\Writer\ODS\Writer as ODSWriter;
@@ -90,15 +91,15 @@ class attempt_results_exporter extends base_exporter {
         // Styles: header (blue bg, white bold), meta-section (light blue bold).
         $headerstyle = (new Style())
             ->setFontBold()
-            ->setFontSize(10)
-            ->setFontColor('FFFFFFFF')
-            ->setBackgroundColor('FF4472C4');
+            ->setFontSize(12)
+            ->setFontColor(Color::WHITE)
+            ->setBackgroundColor('4472C4');
 
         $metasectionstyle = (new Style())
             ->setFontBold()
-            ->setFontSize(10)
-            ->setFontColor('FFFFFFFF')
-            ->setBackgroundColor('FF244062');
+            ->setFontSize(12)
+            ->setFontColor(Color::WHITE)
+            ->setBackgroundColor('244062');
 
         // Open writer and configure column widths (XLSX only).
         $ext = ($format === 'ods') ? '.ods' : '.xlsx';
@@ -116,7 +117,26 @@ class attempt_results_exporter extends base_exporter {
 
         $sheetnum = 0;
 
-        // Sheet 1: attempts_raw.
+        // Sheet 1: metadata (first so educators see export context immediately).
+        if ($sheetnum < $maxsheets) {
+            [$metacols, $metarows] = $this->build_metadata(
+                $report,
+                $filter,
+                $format,
+                count($widerows)
+            );
+            $this->write_meta_sheet(
+                $writer,
+                $sheetnum,
+                get_string('report:sheet_metadata', $plugin),
+                $metacols,
+                $metarows,
+                $headerstyle,
+                $metasectionstyle
+            );
+        }
+
+        // Sheet 2: attempts_raw.
         if ($sheetnum < $maxsheets) {
             $this->write_sheet(
                 $writer,
@@ -128,19 +148,21 @@ class attempt_results_exporter extends base_exporter {
             );
         }
 
-        // Sheet 2: scale_summary.
+        // Sheet 3: scale_summary (with group header row above column headers).
         if ($sheetnum < $maxsheets) {
+            $sumcols = $report->get_scale_summary_columns();
             $this->write_sheet(
                 $writer,
                 $sheetnum,
                 get_string('report:sheet_scale_summary', $plugin),
-                $report->get_scale_summary_columns(),
+                $sumcols,
                 $report->get_scale_summary_rows($filter),
-                $headerstyle
+                $headerstyle,
+                $this->build_scale_summary_group_header($sumcols)
             );
         }
 
-        // Sheet 3: attempts_wide.
+        // Sheet 4: attempts_wide.
         if ($sheetnum < $maxsheets) {
             $this->write_sheet(
                 $writer,
@@ -152,7 +174,7 @@ class attempt_results_exporter extends base_exporter {
             );
         }
 
-        // Sheets 4-7: subscale pivots.
+        // Sheets 5-8: subscale pivots.
         $pivots = [
             'pp' => get_string('report:sheet_subscale_scores', $plugin),
             'se' => get_string('report:sheet_subscale_se', $plugin),
@@ -171,25 +193,6 @@ class attempt_results_exporter extends base_exporter {
                 $pivcols,
                 $report->get_subscale_pivot_rows($filter, $metric),
                 $headerstyle
-            );
-        }
-
-        // Sheet 8: metadata (section rows get distinct formatting).
-        if ($sheetnum < $maxsheets) {
-            [$metacols, $metarows] = $this->build_metadata(
-                $report,
-                $filter,
-                $format,
-                count($widerows)
-            );
-            $this->write_meta_sheet(
-                $writer,
-                $sheetnum,
-                get_string('report:sheet_metadata', $plugin),
-                $metacols,
-                $metarows,
-                $headerstyle,
-                $metasectionstyle
             );
         }
 
@@ -213,12 +216,22 @@ class attempt_results_exporter extends base_exporter {
         string $title,
         array $cols,
         array $rows,
-        Style $headerstyle
+        Style $headerstyle,
+        ?array $groupheader = null
     ): void {
         $this->activate_sheet($writer, $sheetnum, $title);
+        if ($groupheader !== null) {
+            $writer->addRow(Row::fromValues($groupheader, $headerstyle));
+        }
         $writer->addRow(Row::fromValues(array_values($cols), $headerstyle));
+        $colkeys = array_keys($cols);
         foreach ($rows as $row) {
-            $writer->addRow(Row::fromValues(array_values($row)));
+            $vals = [];
+            foreach ($colkeys as $key) {
+                $v = $row[$key] ?? null;
+                $vals[] = is_float($v) ? round($v, 3) : $v;
+            }
+            $writer->addRow(Row::fromValues($vals));
         }
         $sheetnum++;
     }
@@ -249,9 +262,14 @@ class attempt_results_exporter extends base_exporter {
     ): void {
         $this->activate_sheet($writer, $sheetnum, $title);
         $writer->addRow(Row::fromValues(array_values($cols), $headerstyle));
+        $colkeys = array_keys($cols);
         foreach ($rows as $row) {
             $style = (!empty($row['section'])) ? $sectionstyle : null;
-            $writer->addRow(Row::fromValues(array_values($row), $style));
+            $vals = [];
+            foreach ($colkeys as $key) {
+                $vals[] = $row[$key] ?? null;
+            }
+            $writer->addRow(Row::fromValues($vals, $style));
         }
         $sheetnum++;
     }
@@ -294,6 +312,45 @@ class attempt_results_exporter extends base_exporter {
             // Timestamp columns (starttime, endtime).
             $opts->setColumnWidth(18.0, 9, 10);
         }
+    }
+
+    /**
+     * Build a group-header row for the scale_summary sheet.
+     *
+     * Returns an array of strings where the first column of each logical group
+     * contains the group label; remaining columns within the group are empty.
+     * This simulates merged-cell section headers without requiring XLSX merge support.
+     *
+     * @param array $cols Column key => header label map from get_scale_summary_columns().
+     * @return array Group header values aligned to $cols.
+     */
+    private function build_scale_summary_group_header(array $cols): array {
+        $plugin = 'block_catquiz_statistics';
+        $groups = [
+            'scale_id' => get_string('report:col_group_scaleinfo', $plugin),
+            'scale_label' => '',
+            'scale_name' => '',
+            'parent_label' => '',
+            'items_total' => get_string('report:col_group_items', $plugin),
+            'items_productive' => '',
+            'diff_min' => get_string('report:col_group_difficulty', $plugin),
+            'diff_max' => '',
+            'diff_mean' => '',
+            'diff_sd' => '',
+            'n' => get_string('report:col_group_results', $plugin),
+            'mean' => '',
+            'median' => '',
+            'sd' => '',
+            'min' => '',
+            'max' => '',
+            'q1' => '',
+            'q3' => '',
+        ];
+        $header = [];
+        foreach (array_keys($cols) as $key) {
+            $header[] = $groups[$key] ?? '';
+        }
+        return $header;
     }
 
     /**

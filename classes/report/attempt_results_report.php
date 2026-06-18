@@ -294,7 +294,17 @@ class attempt_results_report implements report_interface {
      * @return array<string,string> Column key to header string.
      */
     public function get_columns(): array {
+        $c = 'block_catquiz_statistics';
         $cols = $this->get_fixed_columns();
+        // Global and primary scale columns (between fixed and subscale columns).
+        $cols['global_scale_id'] = get_string('report:col_global_scale_id', $c);
+        $cols['global_scale_name'] = get_string('report:col_global_scale_name', $c);
+        $cols['global_pp'] = get_string('report:col_global_pp', $c);
+        $cols['global_se'] = get_string('report:col_global_se', $c);
+        $cols['primary_scale_id'] = get_string('report:col_primary_scale_id', $c);
+        $cols['primary_scale_name'] = get_string('report:col_primary_scale_name', $c);
+        $cols['primary_pp'] = get_string('report:col_primary_pp', $c);
+        $cols['primary_se'] = get_string('report:col_primary_se', $c);
         foreach ($this->activescaleids as $scaleid) {
             $slabel = $this->activescalelabels[$scaleid] ?? ('Scale ' . $scaleid);
             $cols['scale_' . $scaleid . '_pp'] = $slabel . ' PP';
