@@ -34,6 +34,7 @@
 namespace block_catquiz_statistics\repository;
 
 use block_catquiz_statistics\dto\attempt_data;
+use block_catquiz_statistics\local\statistics_helper;
 use block_catquiz_statistics\local\se_validator;
 
 /**
@@ -78,9 +79,13 @@ class attempt_repository {
     /**
      * Return all mod_adaptivequiz instances that use catquiz in a course.
      *
-     * Joins directly with {adaptivequiz} to get the activity's real name as
-     * configured by the teacher.  The local_catquiz_tests name is a template
-     * name (e.g. "Benutzerdefinierter Test") and is not suitable for display.
+     * Uses a LEFT JOIN against {adaptivequiz} to fetch the human-readable
+     * activity name as set by the teacher (not the CAT template name from
+     * local_catquiz_tests, which is generic, e.g. "Benutzerdefinierter Test").
+     *
+     * LEFT JOIN is intentional: attempts whose adaptivequiz activity has been
+     * deleted since the attempt was recorded remain visible with empty testname
+     * so educators are aware they exist.  An INNER JOIN would silently drop them.
      *
      * @param int $courseid Course ID.
      * @return array Array of stdClass with fields: instanceid, catscaleid, testname, catscalename, attemptcount.
@@ -97,7 +102,7 @@ class attempt_repository {
              . '       aq.name AS testname,'
              . '       cs.name AS catscalename'
              . '  FROM {local_catquiz_attempts} a'
-             . '  JOIN {adaptivequiz} aq ON aq.id = a.instanceid'
+             . '  LEFT JOIN {adaptivequiz} aq ON aq.id = a.instanceid'
              . '  LEFT JOIN {local_catquiz_catscales} cs ON cs.id = a.scaleid'
              . ' WHERE a.courseid = :courseid'
              . ' GROUP BY a.instanceid, a.scaleid, aq.name, cs.name'
@@ -474,5 +479,200 @@ class attempt_repository {
             ];
         }
         return $steps;
+    }
+    /**
+     * Return all catscale metadata (id, name, label, parentid) from the DB.
+     *
+     * Used for hierarchical scale sorting and label-based column headers.
+     * Returns an empty array when local_catquiz_catscales is not available.
+     *
+     * @return array<int,array> Map of scale id to ['name', 'label', 'parentid'].
+     */
+    public function get_all_catscale_meta(): array {
+        global $DB;
+
+        if (!$DB->get_manager()->table_exists('local_catquiz_catscales')) {
+            return [];
+        }
+
+        $records = $DB->get_records('local_catquiz_catscales', null, 'id ASC', 'id, name, label, parentid');
+        $meta = [];
+        foreach ($records as $r) {
+            $meta[(int) $r->id] = [
+                'name' => $r->name ?? '',
+                'label' => $r->label ?? '',
+                'parentid' => (int) ($r->parentid ?? 0),
+            ];
+        }
+        return $meta;
+    }
+
+    /**
+     * Return item statistics per scale: total items, productive items, and
+     * descriptive statistics (min/max/mean/SD) of active-item difficulties.
+     *
+     * "Productive" means activeparamid IS NOT NULL and a matching row exists
+     * in local_catquiz_itemparams (i.e. the item has calibrated IRT parameters).
+     *
+     * @param int[] $scaleids Scale IDs to query.
+     * @return array<int,array> Map of scale id to stat arrays.
+     *   Keys: total, productive, diff_min, diff_max, diff_mean, diff_sd.
+     *   All difficulty keys are null when no productive items exist.
+     */
+    public function get_item_stats_by_scale(array $scaleids): array {
+        global $DB;
+
+        if (empty($scaleids)) {
+            return [];
+        }
+        if (
+            !$DB->get_manager()->table_exists('local_catquiz_items')
+            || !$DB->get_manager()->table_exists('local_catquiz_itemparams')
+        ) {
+            $empty = ['total' => 0, 'productive' => 0,
+                'diff_min' => null, 'diff_max' => null,
+                'diff_mean' => null, 'diff_sd' => null];
+            return array_fill_keys($scaleids, $empty);
+        }
+
+        [$insqla, $inparamsa] = $DB->get_in_or_equal($scaleids, SQL_PARAMS_NAMED, 'tsa');
+        $totalsql = "SELECT catscaleid, COUNT(*) AS cnt
+                       FROM {local_catquiz_items}
+                      WHERE catscaleid $insqla
+                      GROUP BY catscaleid";
+        $totalrows = $DB->get_records_sql($totalsql, $inparamsa);
+
+        [$insqlb, $inparamsb] = $DB->get_in_or_equal($scaleids, SQL_PARAMS_NAMED, 'tsb');
+        $diffsql = "SELECT i.catscaleid, ip.difficulty
+                      FROM {local_catquiz_items} i
+                      JOIN {local_catquiz_itemparams} ip ON ip.id = i.activeparamid
+                     WHERE i.catscaleid $insqlb
+                       AND i.activeparamid IS NOT NULL
+                       AND ip.difficulty IS NOT NULL
+                     ORDER BY i.catscaleid";
+        $diffrs = $DB->get_recordset_sql($diffsql, $inparamsb);
+
+        $diffsbyscale = [];
+        foreach ($diffrs as $row) {
+            $diffsbyscale[(int) $row->catscaleid][] = (float) $row->difficulty;
+        }
+        $diffrs->close();
+
+        $result = [];
+        foreach ($scaleids as $sid) {
+            $total = 0;
+            foreach ($totalrows as $row) {
+                if ((int) $row->catscaleid === $sid) {
+                    $total = (int) $row->cnt;
+                    break;
+                }
+            }
+            $diffs = $diffsbyscale[$sid] ?? [];
+            $productive = count($diffs);
+            $diffstats = $productive > 0 ? statistics_helper::descriptive($diffs) : null;
+            $result[$sid] = [
+                'total' => $total,
+                'productive' => $productive,
+                'diff_min' => $diffstats ? $diffstats['min'] : null,
+                'diff_max' => $diffstats ? $diffstats['max'] : null,
+                'diff_mean' => $diffstats ? $diffstats['mean'] : null,
+                'diff_sd' => $diffstats ? $diffstats['sd'] : null,
+            ];
+        }
+        return $result;
+    }
+
+    /**
+     * Return semax and nmin thresholds for a single adaptivequiz instance.
+     *
+     * Reads local_catquiz_tests.json for the instance and extracts the two
+     * SE-validity thresholds used in the export metadata sheet.
+     *
+     * @param int $instanceid mod_adaptivequiz instance ID.
+     * @return array Two-element array ['semax' => float|null, 'nmin' => int|null].
+     */
+    public function get_semax_nmin_for_instance(int $instanceid): array {
+        $settings = $this->load_quizsettings([$instanceid]);
+        $qs = $settings[$instanceid] ?? null;
+        if ($qs === null) {
+            return ['semax' => null, 'nmin' => null];
+        }
+        $semax = null;
+        $raw = $qs->catquiz_standarderrorgroup->catquiz_standarderror_max ?? null;
+        if ($raw !== null && is_numeric($raw)) {
+            $semax = (float) $raw;
+        }
+        $nmin = null;
+        $rawn = $qs->maxquestionsscalegroup->catquiz_minquestionspersubscale ?? null;
+        if ($rawn !== null && is_numeric($rawn)) {
+            $nmin = (int) $rawn;
+        }
+        return ['semax' => $semax, 'nmin' => $nmin];
+    }
+
+
+    /**
+     * Return all courses that have at least one catquiz attempt.
+     *
+     * Used to populate the course selector on the system-wide admin report.
+     *
+     * @return array Array of stdClass with fields: id, fullname, shortname.
+     */
+    public function get_courses_with_attempts(): array {
+        global $DB;
+
+        if (!$this->check_schema_compatibility()) {
+            return [];
+        }
+
+        $sql = 'SELECT DISTINCT c.id, c.fullname, c.shortname'
+             . '  FROM {local_catquiz_attempts} a'
+             . '  JOIN {course} c ON c.id = a.courseid'
+             . ' ORDER BY c.fullname ASC';
+
+        return array_values($DB->get_records_sql($sql));
+    }
+
+    /**
+     * Return all catquiz instances across all courses (system-wide).
+     *
+     * Prefixes the testname with the course short name so instances from
+     * different courses are distinguishable in a single dropdown.
+     *
+     * @return array Array of stdClass with fields: instanceid, catscaleid,
+     *   testname, catscalename, attemptcount.
+     */
+    public function get_catquiz_instances_systemwide(): array {
+        global $DB;
+
+        if (!$this->check_schema_compatibility()) {
+            return [];
+        }
+
+        $sql = 'SELECT a.instanceid, a.scaleid,'
+             . '       COUNT(a.id) AS attemptcount,'
+             . '       aq.name AS testname,'
+             . '       cs.name AS catscalename,'
+             . '       c.shortname AS courseshortname'
+             . '  FROM {local_catquiz_attempts} a'
+             . '  LEFT JOIN {adaptivequiz} aq ON aq.id = a.instanceid'
+             . '  LEFT JOIN {local_catquiz_catscales} cs ON cs.id = a.scaleid'
+             . '  JOIN {course} c ON c.id = a.courseid'
+             . ' GROUP BY a.instanceid, a.scaleid, aq.name, cs.name, c.shortname'
+             . ' ORDER BY c.shortname ASC, aq.name ASC, a.instanceid ASC';
+
+        $rows = $DB->get_records_sql($sql);
+        $result = [];
+        foreach ($rows as $row) {
+            $label = ($row->courseshortname ?? '') . ' / ' . ($row->testname ?? '');
+            $result[] = (object) [
+                'instanceid' => (int) $row->instanceid,
+                'catscaleid' => (int) $row->scaleid,
+                'testname' => trim($label, ' /'),
+                'catscalename' => $row->catscalename ?? '',
+                'attemptcount' => (int) $row->attemptcount,
+            ];
+        }
+        return $result;
     }
 }

@@ -67,17 +67,45 @@ class report_page implements renderable, templatable {
     /** @var bool Whether local_catquiz schema is available. */
     private bool $schemaok;
 
+    /** @var bool True for the system-wide admin report (adminreport.php). */
+    private bool $issystemwide;
+
+    /**
+     * Course options for the course selector (system-wide mode only).
+     *
+     * Each element: stdClass {id, fullname, shortname}.
+     *
+     * @var array
+     */
+    private array $courses;
+
+    /** @var int Selected course ID (0 = all courses) in system-wide mode. */
+    private int $selectedcourseid;
+
+    /**
+     * URL path to the report PHP file; used for filter form action and export URLs.
+     *
+     * Defaults to the course-level report; adminreport.php passes its own path.
+     *
+     * @var string
+     */
+    private string $reporturlpath;
+
     /**
      * Constructor.
      *
-     * @param int $courseid Course ID.
+     * @param int $courseid Course ID (0 = system-wide).
      * @param attempt_filter $filter Active filter.
-     * @param array $instances List of catquiz instances in the course.
+     * @param array $instances List of catquiz instances in the course/system.
      * @param array $flatrows Flat attempt rows.
      * @param array $widecols Wide column definitions.
      * @param string $startdate Current startdate form value (YYYY-MM-DD or '').
      * @param string $enddate Current enddate form value (YYYY-MM-DD or '').
      * @param bool $schemaok Whether local_catquiz tables exist.
+     * @param bool $issystemwide True for the system-wide admin report.
+     * @param array $courses Courses with attempts (system-wide mode only).
+     * @param int $selectedcourseid Currently selected course in system-wide mode.
+     * @param string $reporturlpath URL path to report PHP file.
      */
     public function __construct(
         int $courseid,
@@ -87,16 +115,24 @@ class report_page implements renderable, templatable {
         array $widecols,
         string $startdate = '',
         string $enddate = '',
-        bool $schemaok = true
+        bool $schemaok = true,
+        bool $issystemwide = false,
+        array $courses = [],
+        int $selectedcourseid = 0,
+        string $reporturlpath = '/blocks/catquiz_statistics/report.php'
     ) {
-        $this->courseid  = $courseid;
-        $this->filter    = $filter;
+        $this->courseid = $courseid;
+        $this->filter = $filter;
         $this->instances = $instances;
-        $this->flatrows  = $flatrows;
-        $this->widecols  = $widecols;
+        $this->flatrows = $flatrows;
+        $this->widecols = $widecols;
         $this->startdate = $startdate;
-        $this->enddate   = $enddate;
-        $this->schemaok  = $schemaok;
+        $this->enddate = $enddate;
+        $this->schemaok = $schemaok;
+        $this->issystemwide = $issystemwide;
+        $this->courses = $courses;
+        $this->selectedcourseid = $selectedcourseid;
+        $this->reporturlpath = $reporturlpath;
     }
 
     /**
@@ -149,7 +185,7 @@ class report_page implements renderable, templatable {
         }
 
         // Build export URLs.
-        $baseurl   = new moodle_url('/blocks/catquiz_statistics/report.php');
+        $baseurl   = new moodle_url($this->reporturlpath);
         $urlparams = $this->filter_to_url_params();
 
         $csvurl = new moodle_url($baseurl, array_merge($urlparams, ['export' => 'csv']));
@@ -167,6 +203,9 @@ class report_page implements renderable, templatable {
             'startdatelabel'  => get_string('report:filter_startdate', $plugin),
             'enddatelabel'    => get_string('report:filter_enddate', $plugin),
             'applylabel'      => get_string('report:filter_apply', $plugin),
+            'issystemwide'  => $this->issystemwide,
+            'courselabel'   => get_string('report:filter_course', $plugin),
+            'courseoptions' => $this->build_course_options(),
             'instanceoptions' => $instanceoptions,
             'startdate'       => $this->startdate,
             'enddate'         => $this->enddate,
@@ -239,7 +278,9 @@ class report_page implements renderable, templatable {
      * @return array<string,mixed> URL parameter array.
      */
     private function filter_to_url_params(): array {
-        $params = ['courseid' => $this->courseid];
+        // Systemwide: use the courseid from the filter (may be 0 = all courses).
+        $params = ['courseid' => $this->issystemwide
+            ? $this->selectedcourseid : $this->courseid];
         if ($this->filter->instanceid !== null) {
             $params['instanceid'] = $this->filter->instanceid;
         }
@@ -250,5 +291,34 @@ class report_page implements renderable, templatable {
             $params['enddate'] = $this->enddate;
         }
         return $params;
+    }
+
+    /**
+     * Build the course options array for the Mustache template.
+     *
+     * Returns an empty array when not in system-wide mode.
+     *
+     * @return array[]
+     */
+    private function build_course_options(): array {
+        if (!$this->issystemwide) {
+            return [];
+        }
+        $plugin = 'block_catquiz_statistics';
+        $opts = [
+            [
+                'value' => '0',
+                'label' => get_string('report:filter_all_courses', $plugin),
+                'selected' => $this->selectedcourseid === 0,
+            ],
+        ];
+        foreach ($this->courses as $course) {
+            $opts[] = [
+                'value' => (string) $course->id,
+                'label' => $course->fullname . ' [' . $course->shortname . ']',
+                'selected' => (int) $course->id === $this->selectedcourseid,
+            ];
+        }
+        return $opts;
     }
 }

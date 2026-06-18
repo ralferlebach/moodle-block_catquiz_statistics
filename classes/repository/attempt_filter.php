@@ -96,4 +96,36 @@ class attempt_filter {
             endtime: $endtime,
         );
     }
+    /**
+     * Build a system-wide filter from HTTP request parameters.
+     *
+     * For use by adminreport.php.  Sets systemwide=true and treats courseid=0
+     * as "all courses".  Passing a non-zero courseid restricts the query to
+     * that course while still running at system context.
+     *
+     * @return self
+     */
+    public static function from_request_systemwide(): self {
+        $courseid   = optional_param('courseid', 0, PARAM_INT);
+        $instanceid = optional_param('instanceid', 0, PARAM_INT) ?: null;
+        $scaleid    = optional_param('scaleid', 0, PARAM_INT) ?: null;
+        $starttime  = null;
+        $endtime    = null;
+        $startdate  = optional_param('startdate', '', PARAM_ALPHANUMEXT);
+        $enddate    = optional_param('enddate', '', PARAM_ALPHANUMEXT);
+        if ($startdate) {
+            $starttime = (int) strtotime($startdate . ' 00:00:00') ?: null;
+        }
+        if ($enddate) {
+            $endtime = (int) strtotime($enddate . ' 23:59:59') ?: null;
+        }
+        return new self(
+            courseid: $courseid,
+            instanceid: $instanceid,
+            scaleid: $scaleid,
+            starttime: $starttime,
+            endtime: $endtime,
+            systemwide: true,
+        );
+    }
 }

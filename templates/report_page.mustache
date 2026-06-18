@@ -1,50 +1,54 @@
 {{!
     @template block_catquiz_statistics/report_page
 
-    Course-level CAT quiz statistics report page.
-    Rendered by report.php; data prepared by \block_catquiz_statistics\output\report_page.
-
-    Classes required for JS: none.
-    Data attributes required for JS: none.
+    CAT Quiz Statistics report page.
+    Used by both report.php (course-level) and adminreport.php (system-wide).
+    Data prepared by \block_catquiz_statistics\output\report_page.
 
     Context variables required for this template:
-    * courseid        - integer - Course ID.
-    * reporturl       - string  - Base URL of report.php.
-    * heading         - string  - Page heading.
-    * schemaerror     - bool    - True if local_catquiz is not installed.
-    * schemaerrortext - string  - Schema missing message (only when schemaerror).
-    * filterlabel     - string  - "Filter" label.
-    * instancelabel   - string  - Instance dropdown label.
-    * startdatelabel  - string  - Start date label.
-    * enddatelabel    - string  - End date label.
-    * applylabel      - string  - Apply button label.
-    * instanceoptions - array   - [{value, label, selected}] for instance dropdown.
-    * startdate       - string  - Current start date value (YYYY-MM-DD).
-    * enddate         - string  - Current end date value (YYYY-MM-DD).
-    * attemptcountlabel - string - "Attempts found:" label.
-    * attemptcount    - integer - Number of rows in table.
-    * hasrows         - bool    - True when table has at least one row.
-    * noattemptsmsg   - string  - No-results message.
-    * tableheaders    - array   - [{label}] column headers.
-    * tablerows       - array   - [{cells: [{v}]}] table body.
-    * exportcsvlabel  - string  - CSV export button label.
-    * exportexcellabel - string - Excel export button label.
-    * exportcsvurl    - string  - CSV export URL.
-    * exportexcelurl  - string  - Excel export URL.
+    * courseid          - integer - Course ID (0 for system-wide).
+    * reporturl         - string  - Base URL for filter form action and export.
+    * heading           - string  - Page heading.
+    * schemaerror       - bool    - True if local_catquiz is not installed.
+    * schemaerrortext   - string  - Schema missing message.
+    * filterlabel       - string  - "Filter" label.
+    * issystemwide      - bool    - True for the admin system-wide report.
+    * courselabel       - string  - Course selector label (system-wide only).
+    * courseoptions     - array   - [{value, label, selected}] course dropdown.
+    * instancelabel     - string  - Instance dropdown label.
+    * instanceoptions   - array   - [{value, label, selected}] instance dropdown.
+    * startdatelabel    - string  - Start date label.
+    * enddatelabel      - string  - End date label.
+    * applylabel        - string  - Apply button label.
+    * startdate         - string  - Current start date value.
+    * enddate           - string  - Current end date value.
+    * attemptcountlabel - string  - "Attempts found:" label.
+    * attemptcount      - integer - Row count.
+    * hasrows           - bool    - True when table has rows.
+    * noattemptsmsg     - string  - No-results message.
+    * tableheaders      - array   - [{label}] headers.
+    * tablerows         - array   - [{cells: [{v}]}] rows.
+    * exportcsvlabel    - string  - CSV export button label.
+    * exportexcellabel  - string  - Excel export button label.
+    * exportcsvurl      - string  - CSV export URL.
+    * exportexcelurl    - string  - Excel export URL.
 
     Example context (json):
     {
-        "courseid": 42,
-        "reporturl": "/blocks/catquiz_statistics/report.php",
-        "heading": "CAT Quiz Statistics",
+        "courseid": 0,
+        "reporturl": "/blocks/catquiz_statistics/adminreport.php",
+        "heading": "CAT Quiz Statistics – System Report",
         "schemaerror": false,
         "schemaerrortext": "",
         "filterlabel": "Filter",
+        "issystemwide": true,
+        "courselabel": "Course",
+        "courseoptions": [{"value": "0", "label": "(all courses)", "selected": true}],
         "instancelabel": "CAT Quiz instance",
+        "instanceoptions": [{"value": "0", "label": "(all instances)", "selected": true}],
         "startdatelabel": "From date",
         "enddatelabel": "To date",
         "applylabel": "Apply filter",
-        "instanceoptions": [{"value": "0", "label": "(all instances)", "selected": true}],
         "startdate": "",
         "enddate": "",
         "attemptcountlabel": "Attempts found:",
@@ -55,8 +59,8 @@
         "tablerows": [],
         "exportcsvlabel": "Export CSV",
         "exportexcellabel": "Export Excel (8 sheets)",
-        "exportcsvurl": "/blocks/catquiz_statistics/report.php?courseid=42&export=csv",
-        "exportexcelurl": "/blocks/catquiz_statistics/report.php?courseid=42&export=excel"
+        "exportcsvurl": "/blocks/catquiz_statistics/adminreport.php?export=csv",
+        "exportexcelurl": "/blocks/catquiz_statistics/adminreport.php?export=excel"
     }
 }}
 <div class="block-catquiz-statistics-report container-fluid mt-3">
@@ -73,10 +77,22 @@
     <div class="card mb-4">
         <div class="card-header">{{filterlabel}}</div>
         <div class="card-body">
-            <form method="get" action="{{reporturl}}">
+            <form method="get" action="{{{reporturl}}}">
+                {{^issystemwide}}
                 <input type="hidden" name="courseid" value="{{courseid}}">
+                {{/issystemwide}}
                 <div class="form-row align-items-end">
-                    <div class="form-group col-md-4">
+                    {{#issystemwide}}
+                    <div class="form-group col-md-3">
+                        <label>{{courselabel}}</label>
+                        <select name="courseid" class="form-control form-control-sm">
+                            {{#courseoptions}}
+                            <option value="{{value}}"{{#selected}} selected{{/selected}}>{{label}}</option>
+                            {{/courseoptions}}
+                        </select>
+                    </div>
+                    {{/issystemwide}}
+                    <div class="form-group col-md-3">
                         <label>{{instancelabel}}</label>
                         <select name="instanceid" class="form-control form-control-sm">
                             {{#instanceoptions}}
@@ -84,12 +100,12 @@
                             {{/instanceoptions}}
                         </select>
                     </div>
-                    <div class="form-group col-md-3">
+                    <div class="form-group col-md-2">
                         <label>{{startdatelabel}}</label>
                         <input type="date" name="startdate" value="{{startdate}}"
                                class="form-control form-control-sm">
                     </div>
-                    <div class="form-group col-md-3">
+                    <div class="form-group col-md-2">
                         <label>{{enddatelabel}}</label>
                         <input type="date" name="enddate" value="{{enddate}}"
                                class="form-control form-control-sm">
@@ -108,10 +124,10 @@
     <div class="d-flex justify-content-between align-items-center mb-2">
         <span class="text-muted">{{attemptcountlabel}} <strong>{{attemptcount}}</strong></span>
         <div>
-            <a href="{{exportcsvurl}}" class="btn btn-outline-secondary btn-sm mr-1">
+            <a href="{{{exportcsvurl}}}" class="btn btn-outline-secondary btn-sm mr-1">
                 {{exportcsvlabel}}
             </a>
-            <a href="{{exportexcelurl}}" class="btn btn-outline-secondary btn-sm">
+            <a href="{{{exportexcelurl}}}" class="btn btn-outline-secondary btn-sm">
                 {{exportexcellabel}}
             </a>
         </div>

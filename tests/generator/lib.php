@@ -48,14 +48,54 @@ class block_catquiz_statistics_generator extends testing_block_generator {
         float $se = 0.3
     ): string {
         return json_encode([
-            'catscaleid'      => $scaleid,
-            'testid'          => 1,
+            'catscaleid' => $scaleid,
+            'testid' => 1,
             'personabilities' => [$scaleid => $pp],
-            'se'              => [$scaleid => $se],
-            'primaryscale'    => (object) ['id' => $scaleid, 'name' => 'TestScale'],
-            'catscales'       => [$scaleid => (object) ['name' => 'TestScale']],
+            'se' => [$scaleid => $se],
+            'primaryscale' => (object) ['id' => $scaleid, 'name' => 'TestScale'],
+            'catscales' => [$scaleid => (object) ['name' => 'TestScale']],
             'graphicalsummary_data' => [],
         ]);
+    }
+
+    /**
+     * Insert a minimal {adaptivequiz} row for testing.
+     *
+     * Creates only the {adaptivequiz} record, not a full course-module entry.
+     * This is sufficient for tests that exercise get_catquiz_instances_for_course(),
+     * which JOINs {local_catquiz_attempts} against {adaptivequiz} to fetch the
+     * human-readable activity name.
+     *
+     * Tests that call this method should guard with markTestSkipped() when
+     * mod_adaptivequiz is absent (check_schema_compatibility() covers this).
+     *
+     * @param array $overrides Field overrides; 'course' and 'name' are most useful.
+     * @return int The id of the inserted {adaptivequiz} row.
+     */
+    public function create_adaptivequiz_instance(array $overrides = []): int {
+        global $DB;
+
+        if (!$DB->get_manager()->table_exists('adaptivequiz')) {
+            throw new coding_exception(
+                'mod_adaptivequiz is not installed. '
+                . 'Guard with markTestSkipped() when the schema is absent.'
+            );
+        }
+
+        $defaults = [
+            'course' => 1,
+            'name' => 'Test CAT Quiz',
+            'intro' => '',
+            'introformat' => 1,
+            'attempts' => 0,
+            'starttime' => 0,
+            'stoptime' => 0,
+            'timecreated' => time(),
+            'timemodified' => time(),
+        ];
+
+        $record = (object) array_merge($defaults, $overrides);
+        return $DB->insert_record('adaptivequiz', $record);
     }
 
     /**
@@ -78,25 +118,25 @@ class block_catquiz_statistics_generator extends testing_block_generator {
         }
 
         $defaults = [
-            'userid'                       => 2,
-            'scaleid'                      => 1,
-            'contextid'                    => 1,
-            'courseid'                     => 1,
-            'attemptid'                    => 1,
-            'component'                    => 'mod_adaptivequiz',
-            'instanceid'                   => 1,
-            'teststrategy'                 => 1,
-            'status'                       => 1,
-            'total_number_of_testitems'    => 20,
-            'number_of_testitems_used'     => 8,
+            'userid' => 2,
+            'scaleid' => 1,
+            'contextid' => 1,
+            'courseid' => 1,
+            'attemptid' => 1,
+            'component' => 'mod_adaptivequiz',
+            'instanceid' => 1,
+            'teststrategy' => 1,
+            'status' => 1,
+            'total_number_of_testitems' => 20,
+            'number_of_testitems_used' => 8,
             'personability_before_attempt' => 0.0,
-            'personability_after_attempt'  => 0.5,
-            'starttime'                    => time() - 600,
-            'endtime'                      => time(),
-            'json'                         => self::build_attempt_json(),
-            'debug_info'                   => null,
-            'timecreated'                  => time(),
-            'timemodified'                 => time(),
+            'personability_after_attempt' => 0.5,
+            'starttime' => time() - 600,
+            'endtime' => time(),
+            'json' => self::build_attempt_json(),
+            'debug_info' => null,
+            'timecreated' => time(),
+            'timemodified' => time(),
         ];
 
         $record = array_merge($defaults, $overrides);
@@ -129,9 +169,9 @@ class block_catquiz_statistics_generator extends testing_block_generator {
         unset($overrides['semax'], $overrides['nminscale']);
 
         $settingsjson = json_encode((object) [
-            'catquiz_catscales'            => 1,
-            'catquiz_selectteststrategy'   => 1,
-            'catquiz_standarderrorgroup'   => (object) [
+            'catquiz_catscales' => 1,
+            'catquiz_selectteststrategy' => 1,
+            'catquiz_standarderrorgroup' => (object) [
                 'catquiz_standarderror_min' => '0.01',
                 'catquiz_standarderror_max' => $semax !== null ? (string) $semax : '0.50',
             ],
@@ -146,18 +186,18 @@ class block_catquiz_statistics_generator extends testing_block_generator {
         ]);
 
         $defaults = [
-            'parentid'          => 0,
-            'componentid'       => 1,
-            'component'         => 'mod_adaptivequiz',
-            'catscaleid'        => 1,
-            'courseid'          => 1,
-            'name'              => 'Test CAT environment',
-            'description'       => '',
+            'parentid' => 0,
+            'componentid' => 1,
+            'component' => 'mod_adaptivequiz',
+            'catscaleid' => 1,
+            'courseid' => 1,
+            'name' => 'Test CAT environment',
+            'description' => '',
             'descriptionformat' => 1,
-            'json'              => $settingsjson,
-            'status'            => 1,
-            'timecreated'       => time(),
-            'timemodified'      => time(),
+            'json' => $settingsjson,
+            'status' => 1,
+            'timecreated' => time(),
+            'timemodified' => time(),
         ];
 
         $record = array_merge($defaults, $overrides);

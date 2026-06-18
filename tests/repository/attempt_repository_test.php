@@ -237,7 +237,11 @@ final class attempt_repository_test extends \advanced_testcase {
     }
 
     /**
-     * get_catquiz_instances_for_course returns one entry per inserted instanceid.
+     * get_catquiz_instances_for_course returns one entry per instanceid.
+     *
+     * Uses a LEFT JOIN against {adaptivequiz} so no adaptivequiz row is needed
+     * for the attempt count to appear.  Orphaned attempts (adaptivequiz deleted)
+     * still show up with an empty testname — this is intentional behaviour.
      *
      * @return void
      */
@@ -275,6 +279,61 @@ final class attempt_repository_test extends \advanced_testcase {
         }
         $this->assertNotNull($found, 'Expected to find instanceid=11 in the result.');
         $this->assertSame(2, (int) $found->attemptcount, 'Expected 2 attempts for instanceid=11.');
+    }
+
+    /**
+     * get_catquiz_instances_for_course uses adaptivequiz.name as testname.
+     *
+     * Creates a real {adaptivequiz} row with a specific name and verifies that
+     * get_catquiz_instances_for_course() returns that name — not the CAT
+     * configuration template name from local_catquiz_tests.
+     *
+     * @return void
+     */
+    public function test_get_catquiz_instances_testname_comes_from_adaptivequiz(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+
+        // The generator inserts a minimal {adaptivequiz} row.
+        // If the Wunderbyte schema has extra NOT NULL columns without defaults,
+        // the insert throws a dml_exception and we skip gracefully.
+        try {
+            $aqid = $gen->create_adaptivequiz_instance([
+                'course' => (int) $course->id,
+                'name' => 'Mathematik Sommersemester',
+            ]);
+        } catch (\dml_exception $e) {
+            $this->markTestSkipped('Minimal adaptivequiz insert failed — schema may require extra fields: ' . $e->getMessage());
+        }
+
+        $gen->create_catquiz_attempt([
+            'userid' => (int) $user->id,
+            'courseid' => (int) $course->id,
+            'instanceid' => $aqid,
+        ]);
+
+        $instances = $this->repo->get_catquiz_instances_for_course((int) $course->id);
+
+        $this->assertNotEmpty($instances);
+        $found = null;
+        foreach ($instances as $inst) {
+            if ((int) $inst->instanceid === $aqid) {
+                $found = $inst;
+                break;
+            }
+        }
+        $this->assertNotNull($found, "Expected instanceid={$aqid} in result.");
+        $this->assertSame(
+            'Mathematik Sommersemester',
+            $found->testname,
+            'testname must equal adaptivequiz.name, not the CAT template name.'
+        );
     }
 
     /**
