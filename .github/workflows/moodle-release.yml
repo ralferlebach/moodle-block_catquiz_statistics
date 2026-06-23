@@ -5,6 +5,10 @@
 # Provides the "CI complete" status check for branch protection.
 #
 # Matrix: Moodle 4.5 · 5.0  ×  PHP 8.1 · 8.2 · 8.3  ×  mariadb · pgsql
+#
+# DB credentials are passed explicitly to moodle-plugin-ci install so that
+# they match the service container configuration, matching the pattern used
+# in moodle-ci.yml which is known-good.
 ##############################################################################
 
 name: Moodle Plugin Release CI
@@ -24,24 +28,26 @@ concurrency:
 env:
   MOODLE_CI: '^4'
   COMPOSER_NO_INTERACTION: 1
+  COMPOSER_PROCESS_TIMEOUT: 0
+  COMPOSER_NO_AUDIT: 1
   PGPASSWORD: moodle
 
 jobs:
 
   ci:
-    name: "CI / ${{ matrix.moodle-branch }} / PHP ${{ matrix.php }} / ${{ matrix.db }}"
+    name: "CI / ${{ matrix.moodle-branch }} / PHP ${{ matrix.php }} / ${{ matrix.db.engine }}"
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
         include:
           # Moodle 4.5.
-          - { moodle-branch: MOODLE_405_STABLE, php: '8.1', db: pgsql   }
-          - { moodle-branch: MOODLE_405_STABLE, php: '8.2', db: mariadb }
-          - { moodle-branch: MOODLE_405_STABLE, php: '8.3', db: pgsql   }
+          - { moodle-branch: MOODLE_405_STABLE, php: '8.1', db: { engine: pgsql,   type: pgsql,   port: 5432, user: moodle, pass: moodle, name: moodle } }
+          - { moodle-branch: MOODLE_405_STABLE, php: '8.2', db: { engine: mariadb, type: mariadb, port: 3306, user: root,   pass: root,   name: moodle } }
+          - { moodle-branch: MOODLE_405_STABLE, php: '8.3', db: { engine: pgsql,   type: pgsql,   port: 5432, user: moodle, pass: moodle, name: moodle } }
           # Moodle 5.0.
-          - { moodle-branch: MOODLE_500_STABLE, php: '8.2', db: pgsql   }
-          - { moodle-branch: MOODLE_500_STABLE, php: '8.3', db: mariadb }
+          - { moodle-branch: MOODLE_500_STABLE, php: '8.2', db: { engine: pgsql,   type: pgsql,   port: 5432, user: moodle, pass: moodle, name: moodle } }
+          - { moodle-branch: MOODLE_500_STABLE, php: '8.3', db: { engine: mariadb, type: mariadb, port: 3306, user: root,   pass: root,   name: moodle } }
 
     services:
       postgres:
@@ -57,13 +63,10 @@ jobs:
       mariadb:
         image: mariadb:10.11
         env:
-          MYSQL_ROOT_PASSWORD:  root
-          MYSQL_USER:           moodle
-          MYSQL_PASSWORD:       moodle
-          MYSQL_DATABASE:       moodle
+          MYSQL_ROOT_PASSWORD: root
         ports: ['3306:3306']
         options: >-
-          --health-cmd "mysqladmin ping -h 127.0.0.1 -u root -proot"
+          --health-cmd "mysqladmin ping --silent"
           --health-interval 10s --health-timeout 5s --health-retries 5
 
     steps:
@@ -110,9 +113,13 @@ jobs:
           moodle-plugin-ci install \
             --plugin ./plugin \
             --db-host 127.0.0.1 \
+            --db-port ${{ matrix.db.port }} \
+            --db-user ${{ matrix.db.user }} \
+            --db-pass ${{ matrix.db.pass }} \
+            --db-name ${{ matrix.db.name }} \
             --no-init
         env:
-          DB:            ${{ matrix.db }}
+          DB:            ${{ matrix.db.type }}
           MOODLE_BRANCH: ${{ matrix.moodle-branch }}
 
       - name: Initialise PHPUnit and Behat environments

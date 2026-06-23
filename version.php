@@ -25,11 +25,11 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component    = 'block_catquiz_statistics';
-$plugin->version      = 2026061713;
+$plugin->version      = 2026062300;
 $plugin->requires     = 2024100700;   // Moodle 4.5.
 $plugin->supported    = [405, 405];   // Tested on Moodle 4.5; extend after 5.x testing.
 $plugin->maturity     = MATURITY_ALPHA;
-$plugin->release      = '0.3.14';
+$plugin->release      = '0.4.0';
 $plugin->dependencies = [
     'local_catquiz'          => 2024120500,
     'mod_adaptivequiz'       => 2024031502,

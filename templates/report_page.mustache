@@ -6,32 +6,35 @@
     Data prepared by \block_catquiz_statistics\output\report_page.
 
     Context variables required for this template:
-    * courseid          - integer - Course ID (0 for system-wide).
-    * reporturl         - string  - Base URL for filter form action and export.
-    * heading           - string  - Page heading.
-    * schemaerror       - bool    - True if local_catquiz is not installed.
-    * schemaerrortext   - string  - Schema missing message.
-    * filterlabel       - string  - "Filter" label.
-    * issystemwide      - bool    - True for the admin system-wide report.
-    * courselabel       - string  - Course selector label (system-wide only).
-    * courseoptions     - array   - [{value, label, selected}] course dropdown.
-    * instancelabel     - string  - Instance dropdown label.
-    * instanceoptions   - array   - [{value, label, selected}] instance dropdown.
-    * startdatelabel    - string  - Start date label.
-    * enddatelabel      - string  - End date label.
-    * applylabel        - string  - Apply button label.
-    * startdate         - string  - Current start date value.
-    * enddate           - string  - Current end date value.
-    * attemptcountlabel - string  - "Attempts found:" label.
-    * attemptcount      - integer - Row count.
-    * hasrows           - bool    - True when table has rows.
-    * noattemptsmsg     - string  - No-results message.
-    * tableheaders      - array   - [{label}] headers.
-    * tablerows         - array   - [{cells: [{v}]}] rows.
-    * exportcsvlabel    - string  - CSV export button label.
-    * exportexcellabel  - string  - Excel export button label.
-    * exportcsvurl      - string  - CSV export URL.
-    * exportexcelurl    - string  - Excel export URL.
+    * courseid              - integer - Course ID (0 for system-wide).
+    * reporturl             - string  - Base URL for filter form action.
+    * heading               - string  - Page heading.
+    * schemaerror           - bool    - True if local_catquiz is not installed.
+    * schemaerrortext       - string  - Schema missing message.
+    * filterlabel           - string  - "Filter" label.
+    * issystemwide          - bool    - True for the admin system-wide report.
+    * courselabel           - string  - Course selector label (system-wide only).
+    * courseoptions         - array   - [{value, label, selected}] course dropdown.
+    * instanceslabel        - string  - Instance checkbox list label.
+    * instancecheckboxes    - array   - [{value, label, checked}] instance checkboxes.
+    * noinstancesmsg        - string  - Message when no instances exist.
+    * startdatelabel        - string  - Start date label.
+    * enddatelabel          - string  - End date label.
+    * applylabel            - string  - Apply button label.
+    * startdate             - string  - Current start date value.
+    * enddate               - string  - Current end date value.
+    * attemptcountlabel     - string  - "Attempts found:" label.
+    * attemptcount          - integer - Row count.
+    * hasrows               - bool    - True when table has rows.
+    * noattemptsmsg         - string  - No-results message.
+    * tableheaders          - array   - [{label}] headers.
+    * tablerows             - array   - [{cells: [{v}]}] rows.
+    * exporturl             - string  - Export form action URL.
+    * exportcourseid        - integer - Course ID passed to export (0 = all).
+    * appliedinstanceids    - array   - [{value}] hidden inputs for export.
+    * formatoptions         - array   - [{value, label, selected}] format dropdown.
+    * exportformatlabel     - string  - Format selector label.
+    * exportbuttonlabel     - string  - Export button label.
 
     Example context (json):
     {
@@ -44,8 +47,9 @@
         "issystemwide": true,
         "courselabel": "Course",
         "courseoptions": [{"value": "0", "label": "(all courses)", "selected": true}],
-        "instancelabel": "CAT Quiz instance",
-        "instanceoptions": [{"value": "0", "label": "(all instances)", "selected": true}],
+        "instanceslabel": "CAT Quiz instances",
+        "instancecheckboxes": [{"value": "1", "label": "My Quiz (12)", "checked": false}],
+        "noinstancesmsg": "No instances found.",
         "startdatelabel": "From date",
         "enddatelabel": "To date",
         "applylabel": "Apply filter",
@@ -57,10 +61,12 @@
         "noattemptsmsg": "No attempts match the current filter.",
         "tableheaders": [{"label": "Name"}],
         "tablerows": [],
-        "exportcsvlabel": "Export CSV",
-        "exportexcellabel": "Export Excel (8 sheets)",
-        "exportcsvurl": "/blocks/catquiz_statistics/adminreport.php?export=csv",
-        "exportexcelurl": "/blocks/catquiz_statistics/adminreport.php?export=excel"
+        "exporturl": "/blocks/catquiz_statistics/adminreport.php",
+        "exportcourseid": 0,
+        "appliedinstanceids": [],
+        "formatoptions": [{"value": "csv", "label": "CSV", "selected": true}],
+        "exportformatlabel": "Export format",
+        "exportbuttonlabel": "Export"
     }
 }}
 <div class="block-catquiz-statistics-report container-fluid mt-3">
@@ -92,14 +98,6 @@
                         </select>
                     </div>
                     {{/issystemwide}}
-                    <div class="form-group col-md-3">
-                        <label>{{instancelabel}}</label>
-                        <select name="instanceid" class="form-control form-control-sm">
-                            {{#instanceoptions}}
-                            <option value="{{value}}"{{#selected}} selected{{/selected}}>{{label}}</option>
-                            {{/instanceoptions}}
-                        </select>
-                    </div>
                     <div class="form-group col-md-2">
                         <label>{{startdatelabel}}</label>
                         <input type="date" name="startdate" value="{{startdate}}"
@@ -116,21 +114,45 @@
                         </button>
                     </div>
                 </div>
+                {{! Instance multi-select: checkboxes }}
+                <div class="form-group mt-2">
+                    <label class="d-block font-weight-bold">{{instanceslabel}}</label>
+                    {{#instancecheckboxes}}
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox"
+                               name="instanceids[]" value="{{value}}" id="inst-{{value}}"
+                               {{#checked}}checked{{/checked}}>
+                        <label class="form-check-label" for="inst-{{value}}">{{label}}</label>
+                    </div>
+                    {{/instancecheckboxes}}
+                    {{^instancecheckboxes}}
+                    <span class="text-muted">{{noinstancesmsg}}</span>
+                    {{/instancecheckboxes}}
+                </div>
             </form>
         </div>
     </div>
 
-    {{! Result count + export buttons }}
+    {{! Result count + export form }}
     <div class="d-flex justify-content-between align-items-center mb-2">
         <span class="text-muted">{{attemptcountlabel}} <strong>{{attemptcount}}</strong></span>
-        <div>
-            <a href="{{{exportcsvurl}}}" class="btn btn-outline-secondary btn-sm mr-1">
-                {{exportcsvlabel}}
-            </a>
-            <a href="{{{exportexcelurl}}}" class="btn btn-outline-secondary btn-sm">
-                {{exportexcellabel}}
-            </a>
-        </div>
+        <form method="get" action="{{{exporturl}}}" class="form-inline">
+            <input type="hidden" name="courseid" value="{{exportcourseid}}">
+            {{#appliedinstanceids}}
+            <input type="hidden" name="instanceids[]" value="{{value}}">
+            {{/appliedinstanceids}}
+            <input type="hidden" name="startdate" value="{{startdate}}">
+            <input type="hidden" name="enddate" value="{{enddate}}">
+            <label class="mr-2 mb-0">{{exportformatlabel}}</label>
+            <select name="export" class="form-control form-control-sm mr-2">
+                {{#formatoptions}}
+                <option value="{{value}}"{{#selected}} selected{{/selected}}>{{label}}</option>
+                {{/formatoptions}}
+            </select>
+            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                {{exportbuttonlabel}}
+            </button>
+        </form>
     </div>
 
     {{! Attempts table }}
