@@ -49,6 +49,8 @@ class exporter_factory {
         switch ($moduleid) {
             case 'a':
                 return new \block_catquiz_statistics\report\attempt_results_report($repository);
+            case 'b':
+                return new \block_catquiz_statistics\report\test_usage_report($repository);
             default:
                 throw new \coding_exception(
                     'Unknown report module id: ' . $moduleid

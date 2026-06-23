@@ -98,6 +98,9 @@ class attempt_results_report implements report_interface {
     /** @var int|null Instanceid used for the current cache. */
     private ?int $cachedinstanceid = null;
 
+    /** @var int[]|null Instanceids array used for the current cache. */
+    private ?array $cachedinstanceids = null;
+
     /**
      * Constructor.
      *
@@ -592,10 +595,14 @@ class attempt_results_report implements report_interface {
      * @return attempt_data[]
      */
     private function ensure_dtos(attempt_filter $filter): array {
+        // Cache is valid only when all filter dimensions match.
+        $sameinstanceids = $this->cachedinstanceids === $filter->instanceids
+            || (empty($this->cachedinstanceids) && empty($filter->instanceids));
         if (
             $this->dtocache !== null
             && $this->cachedcourseid === $filter->courseid
             && $this->cachedinstanceid === $filter->instanceid
+            && $sameinstanceids
         ) {
             return $this->dtocache;
         }
@@ -603,6 +610,7 @@ class attempt_results_report implements report_interface {
         $this->dtocache = $this->repository->get_attempts($filter);
         $this->cachedcourseid = $filter->courseid;
         $this->cachedinstanceid = $filter->instanceid;
+        $this->cachedinstanceids = $filter->instanceids;
 
         // Collect scale IDs and names from JSON (catscales field).
         $scaleids = [];
