@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Stub repository for test_usage_report PHPUnit tests.
+ * Stub repository for test_usage_report and test_progress_report PHPUnit tests.
  *
  * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach

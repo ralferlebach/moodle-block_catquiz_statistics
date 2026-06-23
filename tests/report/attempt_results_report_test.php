@@ -63,12 +63,12 @@ final class attempt_results_report_test extends \advanced_testcase {
     }
 
     /**
-     * get_module_id returns the expected string 'a'.
+     * get_module_id returns the expected string 'results'.
      *
      * @return void
      */
     public function test_get_module_id(): void {
-        $this->assertSame('a', $this->report->get_module_id());
+        $this->assertSame('results', $this->report->get_module_id());
     }
 
     /**

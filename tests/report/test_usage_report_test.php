@@ -15,24 +15,55 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Unit tests for test_usage_report (Phase 2a — Modul B).
+ * Unit tests for test_usage_report (Phase 2a — Modul usage).
  *
  * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers \block_catquiz_statistics\report\test_usage_report
  */
 
 namespace block_catquiz_statistics\report;
 
 use block_catquiz_statistics\dto\attempt_data;
 use block_catquiz_statistics\repository\attempt_filter;
-
+use block_catquiz_statistics\repository\attempt_repository;
 
 /**
  * Tests for test_usage_report.
+ *
+ * @covers \block_catquiz_statistics\report\test_usage_report
  */
 final class test_usage_report_test extends \basic_testcase {
+    /**
+     * Create a stub repository returning the given DTOs.
+     *
+     * Uses an anonymous class so no extra file or require_once is needed.
+     *
+     * @param attempt_data[] $dtos DTOs to return from get_attempts().
+     * @return attempt_repository
+     */
+    private function make_repo(array $dtos): attempt_repository {
+        return new class ($dtos) extends attempt_repository {
+            /** @var attempt_data[] Pre-configured DTOs. */
+            private array $dtos;
+            /**
+             * Constructor.
+             * @param attempt_data[] $dtos DTOs to return.
+             */
+            public function __construct(array $dtos) {
+                $this->dtos = $dtos;
+            }
+            /**
+             * Return the pre-configured DTOs.
+             * @param attempt_filter $filter Ignored.
+             * @return attempt_data[]
+             */
+            public function get_attempts(attempt_filter $filter): array {
+                return $this->dtos;
+            }
+        };
+    }
+
     /**
      * Build a minimal attempt_data DTO for testing.
      *
@@ -64,11 +95,11 @@ final class test_usage_report_test extends \basic_testcase {
     }
 
     /**
-     * Module ID must be 'b'.
+     * Module ID must be 'usage'.
      */
     public function test_module_id(): void {
-        $report = new test_usage_report(new stub_repository_usage([]));
-        $this->assertSame('b', $report->get_module_id());
+        $report = new test_usage_report($this->make_repo([]));
+        $this->assertSame('usage', $report->get_module_id());
     }
 
     /**
@@ -76,7 +107,7 @@ final class test_usage_report_test extends \basic_testcase {
      */
     public function test_empty_returns_empty_rows(): void {
         $filter = new attempt_filter(courseid: 1);
-        $report = new test_usage_report(new stub_repository_usage([]));
+        $report = new test_usage_report($this->make_repo([]));
         $this->assertSame([], $report->get_flat_rows($filter));
     }
 
@@ -86,7 +117,7 @@ final class test_usage_report_test extends \basic_testcase {
     public function test_single_attempt_rank_one(): void {
         $dto = $this->make_dto(1, 10, 1000, 5, 0.5, 0.3);
         $filter = new attempt_filter(courseid: 1);
-        $report = new test_usage_report(new stub_repository_usage([$dto]));
+        $report = new test_usage_report($this->make_repo([$dto]));
         $rows = $report->get_flat_rows($filter);
 
         $this->assertCount(1, $rows);
@@ -103,7 +134,7 @@ final class test_usage_report_test extends \basic_testcase {
         $dto1 = $this->make_dto(1, 10, 1000, 5, 0.5, 0.3);
         $dto2 = $this->make_dto(1, 10, 2000, 5, 0.8, 0.25);
         $filter = new attempt_filter(courseid: 1);
-        $report = new test_usage_report(new stub_repository_usage([$dto1, $dto2]));
+        $report = new test_usage_report($this->make_repo([$dto1, $dto2]));
         $rows = $report->get_flat_rows($filter);
 
         $this->assertCount(2, $rows);
@@ -127,7 +158,7 @@ final class test_usage_report_test extends \basic_testcase {
         $dto2a = $this->make_dto(2, 10, 1500, 5, 0.4, 0.35);
         $filter = new attempt_filter(courseid: 1);
         $report = new test_usage_report(
-            new stub_repository_usage([$dto1a, $dto1b, $dto2a])
+            $this->make_repo([$dto1a, $dto1b, $dto2a])
         );
         $rows = $report->get_flat_rows($filter);
 
@@ -146,7 +177,7 @@ final class test_usage_report_test extends \basic_testcase {
      * get_columns() contains rci, delta_ability, and attempt_rank keys.
      */
     public function test_get_columns_has_rci_and_delta(): void {
-        $report = new test_usage_report(new stub_repository_usage([]));
+        $report = new test_usage_report($this->make_repo([]));
         $cols = $report->get_columns();
         $this->assertArrayHasKey('rci', $cols);
         $this->assertArrayHasKey('delta_ability', $cols);
@@ -158,7 +189,7 @@ final class test_usage_report_test extends \basic_testcase {
      */
     public function test_aggregate_stats_empty(): void {
         $filter = new attempt_filter(courseid: 1);
-        $report = new test_usage_report(new stub_repository_usage([]));
+        $report = new test_usage_report($this->make_repo([]));
         $this->assertSame([], $report->get_aggregate_stats($filter));
     }
 
@@ -169,7 +200,7 @@ final class test_usage_report_test extends \basic_testcase {
         $dto1 = $this->make_dto(1, 10, 1000, 5, 0.4, 0.3);
         $dto2 = $this->make_dto(2, 10, 2000, 5, 0.6, 0.3);
         $filter = new attempt_filter(courseid: 1);
-        $report = new test_usage_report(new stub_repository_usage([$dto1, $dto2]));
+        $report = new test_usage_report($this->make_repo([$dto1, $dto2]));
         $stats = $report->get_aggregate_stats($filter);
         $this->assertEqualsWithDelta(0.5, $stats['mean'], 1e-9);
         $this->assertSame(2, $stats['n']);

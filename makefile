@@ -138,16 +138,19 @@ phpunit:
 		echo "SKIP: phpunit_dataroot not configured."; \
 		echo "      Add to config.php: \$$CFG->phpunit_dataroot = '...';"; \
 	else \
-		output=$$(cd $(MOODLE_ROOT) && $(PHP) vendor/bin/phpunit \
+		reinit_check=$$(cd $(MOODLE_ROOT) && $(PHP) vendor/bin/phpunit \
 			--testsuite $(PLUGIN_NAME)_testsuite \
-			--testdox 2>&1); \
-		if printf '%s\n' "$$output" | grep -q "initialised for different version"; then \
+			--testdox 2>&1 | head -5); \
+		if printf '%s\n' "$$reinit_check" | grep -q "initialised for different version"; then \
 			echo "PHPUnit environment outdated — reinitialising..."; \
 			cd $(MOODLE_ROOT) && $(PHP) admin/tool/phpunit/cli/init.php; \
-			cd $(MOODLE_ROOT) && $(PHP) vendor/bin/phpunit \
-				--testsuite $(PLUGIN_NAME)_testsuite \
-				--testdox 2>&1 | grep -vE '^ . |^$$' || true; \
-		else \
-			printf '%s\n' "$$output" | grep -vE '^ . |^$$' || true; \
 		fi; \
+		tmpout=$$(mktemp); \
+		cd $(MOODLE_ROOT) && $(PHP) vendor/bin/phpunit \
+			--testsuite $(PLUGIN_NAME)_testsuite \
+			--testdox > "$$tmpout" 2>&1; \
+		phpunit_exit=$$?; \
+		grep -v "^ ✔\|^ ✓\|^ ↩" "$$tmpout" || true; \
+		rm -f "$$tmpout"; \
+		exit $$phpunit_exit; \
 	fi

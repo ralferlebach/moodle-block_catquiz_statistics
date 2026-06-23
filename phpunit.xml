@@ -12,8 +12,6 @@
          bootstrap="../../lib/phpunit/bootstrap.php">
     <testsuites>
         <testsuite name="block_catquiz_statistics_testsuite">
-            <!-- Fixture files loaded before test discovery. -->
-            <file>tests/fixtures/stub_repository_usage.php</file>
             <!-- Scans tests/ and all subdirectories for *_test.php files. -->
             <directory suffix="_test.php">tests</directory>
         </testsuite>

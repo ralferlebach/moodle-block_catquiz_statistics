@@ -343,9 +343,9 @@ class report_page implements renderable, templatable {
         $modules = [
             'results' => ['label' => get_string('module_a', $plugin), 'enabled' => true],
             'usage'   => ['label' => get_string('module_b', $plugin), 'enabled' => true],
-            'progress'=> ['label' => get_string('module_c', $plugin), 'enabled' => true],
-            'activity'=> ['label' => get_string('module_d', $plugin), 'enabled' => false],
-            'items'   => ['label' => get_string('module_e', $plugin), 'enabled' => false],
+            'progress' => ['label' => get_string('module_c', $plugin), 'enabled' => true],
+            'activity' => ['label' => get_string('module_d', $plugin), 'enabled' => false],
+            'items'    => ['label' => get_string('module_e', $plugin), 'enabled' => false],
         ];
 
         $tabs = [];

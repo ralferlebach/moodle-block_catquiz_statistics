@@ -41,6 +41,7 @@
 namespace block_catquiz_statistics\report;
 
 use block_catquiz_statistics\dto\attempt_data;
+use block_catquiz_statistics\local\statistics_helper;
 use block_catquiz_statistics\repository\attempt_filter;
 use block_catquiz_statistics\repository\attempt_repository;
 
@@ -128,21 +129,11 @@ class test_progress_report implements report_interface {
                 $values[] = (float) $last->personability_after;
             }
         }
-        if (empty($values)) {
+        $stats = statistics_helper::descriptive($values);
+        if ($stats['n'] === 0) {
             return [];
         }
-        sort($values);
-        $n = count($values);
-        return [
-            'n'      => $n,
-            'mean'   => array_sum($values) / $n,
-            'median' => $this->percentile($values, 50),
-            'sd'     => $this->stddev($values),
-            'min'    => $values[0],
-            'max'    => $values[$n - 1],
-            'q1'     => $this->percentile($values, 25),
-            'q3'     => $this->percentile($values, 75),
-        ];
+        return $stats;
     }
 
     /**
@@ -166,7 +157,7 @@ class test_progress_report implements report_interface {
             'difficulty'         => get_string('report:col_difficulty', $c),
             'lastresponse'       => get_string('report:col_lastresponse', $c),
             'fisherinformation'  => get_string('report:col_fisherinformation', $c),
-            'personability_after'=> get_string('report:col_personability_after', $c),
+            'personability_after' => get_string('report:col_personability_after', $c),
         ];
     }
 
@@ -196,49 +187,5 @@ class test_progress_report implements report_interface {
             'personability_after' => isset($step->personability_after)
                 ? (float) $step->personability_after : null,
         ];
-    }
-
-    /**
-     * Compute percentile from a sorted array using linear interpolation.
-     *
-     * @param float[] $sorted Sorted values (ascending).
-     * @param float $p Percentile (0–100).
-     * @return float|null
-     */
-    private function percentile(array $sorted, float $p): ?float {
-        $n = count($sorted);
-        if ($n === 0) {
-            return null;
-        }
-        if ($n === 1) {
-            return (float) $sorted[0];
-        }
-        $index = ($p / 100) * ($n - 1);
-        $lower = (int) floor($index);
-        $upper = (int) ceil($index);
-        if ($lower === $upper) {
-            return (float) $sorted[$lower];
-        }
-        $frac = $index - $lower;
-        return (float) ($sorted[$lower] * (1 - $frac) + $sorted[$upper] * $frac);
-    }
-
-    /**
-     * Compute population standard deviation.
-     *
-     * @param float[] $values Non-empty list of values.
-     * @return float|null Null when fewer than two values.
-     */
-    private function stddev(array $values): ?float {
-        $n = count($values);
-        if ($n < 2) {
-            return null;
-        }
-        $mean = array_sum($values) / $n;
-        $variance = array_sum(array_map(
-            static fn($v) => ($v - $mean) ** 2,
-            $values
-        )) / $n;
-        return sqrt($variance);
     }
 }

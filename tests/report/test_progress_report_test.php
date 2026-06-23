@@ -20,18 +20,50 @@
  * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers \block_catquiz_statistics\report\test_progress_report
  */
 
 namespace block_catquiz_statistics\report;
 
 use block_catquiz_statistics\dto\attempt_data;
 use block_catquiz_statistics\repository\attempt_filter;
+use block_catquiz_statistics\repository\attempt_repository;
 
 /**
  * Tests for test_progress_report.
+ *
+ * @covers \block_catquiz_statistics\report\test_progress_report
  */
 final class test_progress_report_test extends \basic_testcase {
+    /**
+     * Create a stub repository returning the given DTOs.
+     *
+     * Uses an anonymous class so no extra file or require_once is needed.
+     *
+     * @param attempt_data[] $dtos DTOs to return from get_attempts().
+     * @return attempt_repository
+     */
+    private function make_repo(array $dtos): attempt_repository {
+        return new class ($dtos) extends attempt_repository {
+            /** @var attempt_data[] Pre-configured DTOs. */
+            private array $dtos;
+            /**
+             * Constructor.
+             * @param attempt_data[] $dtos DTOs to return.
+             */
+            public function __construct(array $dtos) {
+                $this->dtos = $dtos;
+            }
+            /**
+             * Return the pre-configured DTOs.
+             * @param attempt_filter $filter Ignored.
+             * @return attempt_data[]
+             */
+            public function get_attempts(attempt_filter $filter): array {
+                return $this->dtos;
+            }
+        };
+    }
+
     /**
      * Build a graphicalsummary step stdClass.
      *
@@ -78,7 +110,7 @@ final class test_progress_report_test extends \basic_testcase {
      * Module ID must be 'progress'.
      */
     public function test_module_id(): void {
-        $report = new test_progress_report(new stub_repository_usage([]));
+        $report = new test_progress_report($this->make_repo([]));
         $this->assertSame('progress', $report->get_module_id());
     }
 
@@ -87,7 +119,7 @@ final class test_progress_report_test extends \basic_testcase {
      */
     public function test_empty_returns_empty_rows(): void {
         $filter = new attempt_filter(courseid: 1);
-        $report = new test_progress_report(new stub_repository_usage([]));
+        $report = new test_progress_report($this->make_repo([]));
         $this->assertSame([], $report->get_flat_rows($filter));
     }
 
@@ -97,7 +129,7 @@ final class test_progress_report_test extends \basic_testcase {
     public function test_attempt_without_steps_skipped(): void {
         $dto = $this->make_dto(1, []);
         $filter = new attempt_filter(courseid: 1);
-        $report = new test_progress_report(new stub_repository_usage([$dto]));
+        $report = new test_progress_report($this->make_repo([$dto]));
         $this->assertSame([], $report->get_flat_rows($filter));
     }
 
@@ -112,7 +144,7 @@ final class test_progress_report_test extends \basic_testcase {
         ];
         $dto = $this->make_dto(1, $steps);
         $filter = new attempt_filter(courseid: 1);
-        $report = new test_progress_report(new stub_repository_usage([$dto]));
+        $report = new test_progress_report($this->make_repo([$dto]));
         $rows = $report->get_flat_rows($filter);
 
         $this->assertCount(3, $rows);
@@ -128,7 +160,7 @@ final class test_progress_report_test extends \basic_testcase {
         $step = $this->make_step(7, 0.4, 0.75, 0.55);
         $dto = $this->make_dto(2, [$step]);
         $filter = new attempt_filter(courseid: 1);
-        $report = new test_progress_report(new stub_repository_usage([$dto]));
+        $report = new test_progress_report($this->make_repo([$dto]));
         $rows = $report->get_flat_rows($filter);
 
         $this->assertSame(2, $rows[0]['userid']);
@@ -148,11 +180,10 @@ final class test_progress_report_test extends \basic_testcase {
             $this->make_step(5, 0.1, 1.0, 0.4),
         ]);
         $filter = new attempt_filter(courseid: 1);
-        $report = new test_progress_report(new stub_repository_usage([$dto1, $dto2]));
+        $report = new test_progress_report($this->make_repo([$dto1, $dto2]));
         $rows = $report->get_flat_rows($filter);
 
         $this->assertCount(3, $rows);
-        // User 2 step numbers restart at 1.
         $user2rows = array_values(array_filter($rows, fn($r) => $r['userid'] === 2));
         $this->assertSame(1, $user2rows[0]['step_nr']);
         $this->assertSame(2, $user2rows[1]['step_nr']);
@@ -162,7 +193,7 @@ final class test_progress_report_test extends \basic_testcase {
      * get_columns() contains all expected step-level keys.
      */
     public function test_get_columns_has_step_keys(): void {
-        $report = new test_progress_report(new stub_repository_usage([]));
+        $report = new test_progress_report($this->make_repo([]));
         $cols = $report->get_columns();
         foreach (['step_nr', 'questionname', 'difficulty', 'lastresponse', 'personability_after'] as $key) {
             $this->assertArrayHasKey($key, $cols);
