@@ -3,7 +3,7 @@
     PHPUnit configuration for block_catquiz_statistics.
 
     bootstrap: path is relative to THIS file's location (blocks/catquiz_statistics/).
-    Two levels up  →  Moodle root  →  lib/phpunit/bootstrap.php
+    Two levels up  ->  Moodle root  ->  lib/phpunit/bootstrap.php
     This ensures advanced_testcase and all Moodle PHPUnit fixtures are available
     whether moodle-plugin-ci loads this file directly OR uses the Moodle-root phpunit.xml.
 -->
@@ -12,6 +12,8 @@
          bootstrap="../../lib/phpunit/bootstrap.php">
     <testsuites>
         <testsuite name="block_catquiz_statistics_testsuite">
+            <!-- Fixture files loaded before test discovery. -->
+            <file>tests/fixtures/stub_repository_usage.php</file>
             <!-- Scans tests/ and all subdirectories for *_test.php files. -->
             <directory suffix="_test.php">tests</directory>
         </testsuite>

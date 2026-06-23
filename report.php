@@ -17,21 +17,21 @@
 /**
  * Course-level statistics report page for block_catquiz_statistics.
  *
- * Displays a filterable table of CAT quiz attempts with a format selector
- * for CSV / JSON / XLSX / ODS export.  Access requires both the block
- * capability viewdetails AND local/catquiz:view_users_feedback.
+ * Displays module tabs (Testergebnisse, Testnutzung, …), a filter bar
+ * and a result table with format selector for CSV / JSON / XLSX / ODS export.
+ * Access requires viewdetails AND local/catquiz:view_users_feedback.
  *
  * URL parameters:
- *   courseid    (int, required)  Course ID; must be a positive integer.
- *   instanceids (int[], optional) Filter to several mod_adaptivequiz instances.
- *   instanceid  (int, optional)  Legacy single-instance filter (fallback).
+ *   courseid    (int, required)   Course ID; must be a positive integer.
+ *   moduleid    (string, optional) Active module: 'results'|'usage'|…. Default 'results'.
+ *   instanceids (int[], optional)  Filter to several mod_adaptivequiz instances.
+ *   instanceid  (int, optional)   Legacy single-instance filter (fallback).
  *   startdate   (string YYYY-MM-DD, optional) Attempt start lower bound.
  *   enddate     (string YYYY-MM-DD, optional) Attempt start upper bound.
- *   export      (string 'csv'|'json'|'excel'|'ods', optional) Trigger download and exit.
+ *   export      (string 'csv'|'json'|'excel'|'ods', optional) Trigger download.
  *
- * Robustness note: courseid=0 can arrive from theme-generated pagination links
- * when the page URL has been indexed without a valid course context.  The
- * script redirects to the site home rather than throwing a DB exception.
+ * Robustness note: courseid=0 can arrive from theme-generated pagination links.
+ * The script redirects to the site home rather than throwing a DB exception.
  *
  * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
@@ -41,11 +41,13 @@
 require_once('../../config.php');
 
 use block_catquiz_statistics\export\attempt_results_exporter;
-use block_catquiz_statistics\report\attempt_results_report;
+use block_catquiz_statistics\export\exporter_factory;
+use block_catquiz_statistics\output\report_page;
 use block_catquiz_statistics\repository\attempt_filter;
 use block_catquiz_statistics\repository\attempt_repository;
 
 $courseid    = required_param('courseid', PARAM_INT);
+$moduleid    = optional_param('moduleid', 'results', PARAM_ALPHA);
 $instanceid  = optional_param('instanceid', 0, PARAM_INT) ?: null;
 $instanceids = optional_param_array('instanceids', [], PARAM_INT);
 $startdate   = optional_param('startdate', '', PARAM_ALPHANUMEXT);
@@ -53,7 +55,7 @@ $enddate     = optional_param('enddate', '', PARAM_ALPHANUMEXT);
 $export      = optional_param('export', '', PARAM_ALPHA);
 
 // Guard: courseid=0 arrives from theme pagination links when no course context
-// is set. Redirect gracefully instead of crashing with a DB exception.
+// is set.  Redirect gracefully instead of crashing with a DB exception.
 if ($courseid < 1) {
     redirect(new moodle_url('/'));
 }
@@ -64,9 +66,15 @@ $context = context_course::instance($courseid);
 require_login($course);
 \block_catquiz_statistics\access::require_viewdetails($context);
 
+// Resolve the active module; fall back to 'a' for unknown IDs.
+$allowedmodules = ['results', 'usage', 'progress'];
+if (!in_array($moduleid, $allowedmodules, true)) {
+    $moduleid = 'results';
+}
+
 // Convert date strings (YYYY-MM-DD) to Unix timestamps.
 $starttime = $startdate ? (int) strtotime($startdate . ' 00:00:00') ?: null : null;
-$endtime   = $enddate ? (int) strtotime($enddate   . ' 23:59:59') ?: null : null;
+$endtime = $enddate ? (int) strtotime($enddate . ' 23:59:59') ?: null : null;
 
 $filter = new attempt_filter(
     courseid: $courseid,
@@ -76,8 +84,8 @@ $filter = new attempt_filter(
     instanceids: $instanceids
 );
 
-$repo    = new attempt_repository();
-$report  = new attempt_results_report($repo);
+$repo   = new attempt_repository();
+$report = exporter_factory::create_report($moduleid, $repo);
 
 // Handle export before any HTML output.
 if ($export !== '') {
@@ -89,7 +97,9 @@ if ($export !== '') {
 }
 
 $PAGE->set_context($context);
-$PAGE->set_url(new moodle_url('/blocks/catquiz_statistics/report.php', ['courseid' => $courseid]));
+$PAGE->set_url(
+    new moodle_url('/blocks/catquiz_statistics/report.php', ['courseid' => $courseid])
+);
 $PAGE->set_title(get_string('reporttitle', 'block_catquiz_statistics'));
 $PAGE->set_heading($course->fullname);
 $PAGE->set_pagelayout('report');
@@ -98,15 +108,12 @@ $PAGE->navbar->add(
     new moodle_url('/blocks/catquiz_statistics/report.php', ['courseid' => $courseid])
 );
 
-$instances = $repo->check_schema_compatibility()
-    ? $repo->get_catquiz_instances_for_course($courseid) : [];
+$schemaok  = $repo->check_schema_compatibility();
+$instances = $schemaok ? $repo->get_catquiz_instances_for_course($courseid) : [];
+$flatrows  = $schemaok ? $report->get_flat_rows($filter) : [];
+$widecols  = $report->get_columns();
 
-$flatrows = $repo->check_schema_compatibility()
-    ? $report->get_flat_rows($filter) : [];
-
-$widecols = $report->get_columns();
-
-$reportpage = new \block_catquiz_statistics\output\report_page(
+$reportpage = new report_page(
     courseid: $courseid,
     filter: $filter,
     instances: $instances,
@@ -114,7 +121,9 @@ $reportpage = new \block_catquiz_statistics\output\report_page(
     widecols: $widecols,
     startdate: $startdate,
     enddate: $enddate,
-    schemaok: $repo->check_schema_compatibility()
+    schemaok: $schemaok,
+    moduleid: $moduleid,
+    reporturlpath: '/blocks/catquiz_statistics/report.php'
 );
 
 echo $OUTPUT->header();

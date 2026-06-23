@@ -35,7 +35,7 @@ use block_catquiz_statistics\repository\attempt_filter;
  */
 interface report_interface {
     /**
-     * Module identifier used in URLs and export filenames ('a', 'b', 'c', 'd', 'e').
+     * Module identifier used in URLs and export filenames ('results', 'usage', 'progress', 'activity', 'items').
      *
      * @return string
      */

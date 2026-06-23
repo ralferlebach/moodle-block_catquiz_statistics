@@ -91,6 +91,9 @@ class report_page implements renderable, templatable {
      */
     private string $reporturlpath;
 
+    /** @var string Active report module ID ('results', 'usage', …). */
+    private string $moduleid;
+
     /**
      * Constructor.
      *
@@ -106,6 +109,7 @@ class report_page implements renderable, templatable {
      * @param array $courses Courses with attempts (system-wide mode only).
      * @param int $selectedcourseid Currently selected course in system-wide mode.
      * @param string $reporturlpath URL path to report PHP file.
+     * @param string $moduleid Active report module ID ('results', 'usage', …).
      */
     public function __construct(
         int $courseid,
@@ -119,7 +123,8 @@ class report_page implements renderable, templatable {
         bool $issystemwide = false,
         array $courses = [],
         int $selectedcourseid = 0,
-        string $reporturlpath = '/blocks/catquiz_statistics/report.php'
+        string $reporturlpath = '/blocks/catquiz_statistics/report.php',
+        string $moduleid = 'results'
     ) {
         $this->courseid = $courseid;
         $this->filter = $filter;
@@ -133,6 +138,7 @@ class report_page implements renderable, templatable {
         $this->courses = $courses;
         $this->selectedcourseid = $selectedcourseid;
         $this->reporturlpath = $reporturlpath;
+        $this->moduleid = $moduleid;
     }
 
     /**
@@ -209,6 +215,9 @@ class report_page implements renderable, templatable {
 
         $baseurl = new moodle_url($this->reporturlpath);
 
+        // Build module tab definitions.
+        $tabs = $this->build_tabs($baseurl);
+
         return [
             'courseid'        => $this->courseid,
             'reporturl'       => $baseurl->out(false),
@@ -240,6 +249,8 @@ class report_page implements renderable, templatable {
             'formatoptions'    => $formatoptions,
             'exportformatlabel' => get_string('report:export_format', $plugin),
             'exportbuttonlabel' => get_string('report:export_button', $plugin),
+            'tabs'             => $tabs,
+            'activemoduleid'   => $this->moduleid,
         ];
     }
 
@@ -312,6 +323,47 @@ class report_page implements renderable, templatable {
             $params['enddate'] = $this->enddate;
         }
         return $params;
+    }
+
+    /**
+     * Build the module tab definitions for the Mustache template.
+     *
+     * Active modules (a, b) are clickable links. Future modules (c–e) are
+     * rendered as disabled tabs with a "coming soon" indicator.
+     *
+     * Each tab entry: {id, label, active, enabled, url}.
+     *
+     * @param moodle_url $baseurl Base report URL (without moduleid).
+     * @return array[]
+     */
+    private function build_tabs(moodle_url $baseurl): array {
+        $plugin = 'block_catquiz_statistics';
+
+        // Modules a and b are implemented; c–e are planned.
+        $modules = [
+            'results' => ['label' => get_string('module_a', $plugin), 'enabled' => true],
+            'usage'   => ['label' => get_string('module_b', $plugin), 'enabled' => true],
+            'progress'=> ['label' => get_string('module_c', $plugin), 'enabled' => true],
+            'activity'=> ['label' => get_string('module_d', $plugin), 'enabled' => false],
+            'items'   => ['label' => get_string('module_e', $plugin), 'enabled' => false],
+        ];
+
+        $tabs = [];
+        foreach ($modules as $id => $def) {
+            $urlparams = ['moduleid' => $id];
+            if (!$this->issystemwide) {
+                $urlparams['courseid'] = $this->courseid;
+            }
+            $taburl = new moodle_url($baseurl, $urlparams);
+            $tabs[] = [
+                'id'      => $id,
+                'label'   => $def['label'],
+                'active'  => $id === $this->moduleid,
+                'enabled' => $def['enabled'],
+                'url'     => $def['enabled'] ? $taburl->out(false) : '#',
+            ];
+        }
+        return $tabs;
     }
 
     /**

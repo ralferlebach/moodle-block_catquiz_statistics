@@ -66,7 +66,7 @@ class test_usage_report implements report_interface {
      * @return string
      */
     public function get_module_id(): string {
-        return 'b';
+        return 'usage';
     }
 
     /**
@@ -222,7 +222,8 @@ class test_usage_report implements report_interface {
                 if ($prevpp !== null && $pp !== null) {
                     $delta = $pp - $prevpp;
                 }
-                if ($delta !== null && $prevse !== null && $se !== null
+                if (
+                    $delta !== null && $prevse !== null && $se !== null
                     && ($prevse ** 2 + $se ** 2) > 0
                 ) {
                     $rci = $delta / sqrt($prevse ** 2 + $se ** 2);

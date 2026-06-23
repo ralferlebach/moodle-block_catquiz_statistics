@@ -30,14 +30,14 @@ use block_catquiz_statistics\repository\attempt_repository;
 /**
  * Creates the correct report + exporter pair for a given module ID.
  *
- * Module IDs: 'a' Test Results | 'b' Test Usage | 'c' Test Progress |
- *             'd' Learning Activity | 'e' Item & Response Analysis
+ * Module IDs: 'results' Test Results | 'usage' Test Usage | 'progress' Test Progress |
+ *             'activity' Learning Activity | 'items' Item & Response Analysis
  */
 class exporter_factory {
     /**
      * Build a report object for the given module ID.
      *
-     * @param string             $moduleid  One of 'a'–'e'.
+     * @param string             $moduleid  One of 'results', 'usage', 'progress', 'activity', 'items'.
      * @param attempt_repository $repository Injected repository.
      * @return report_interface
      * @throws \coding_exception When the module ID is not recognised.
@@ -47,10 +47,12 @@ class exporter_factory {
         attempt_repository $repository
     ): report_interface {
         switch ($moduleid) {
-            case 'a':
+            case 'results':
                 return new \block_catquiz_statistics\report\attempt_results_report($repository);
-            case 'b':
+            case 'usage':
                 return new \block_catquiz_statistics\report\test_usage_report($repository);
+            case 'progress':
+                return new \block_catquiz_statistics\report\test_progress_report($repository);
             default:
                 throw new \coding_exception(
                     'Unknown report module id: ' . $moduleid

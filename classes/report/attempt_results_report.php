@@ -116,7 +116,7 @@ class attempt_results_report implements report_interface {
      * @return string
      */
     public function get_module_id(): string {
-        return 'a';
+        return 'results';
     }
 
     /**

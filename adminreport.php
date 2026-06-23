@@ -18,16 +18,17 @@
  * System-wide statistics report page for block_catquiz_statistics.
  *
  * Restricted to users holding block/catquiz_statistics:viewall at system
- * context AND local/catquiz:canmanage.  Shows CAT quiz attempt data across
- * all courses; optional courseid parameter restricts to a single course.
+ * context AND local/catquiz:canmanage.  Displays module tabs and attempt data
+ * across all courses; optional courseid parameter restricts to a single course.
  *
  * URL parameters:
- *   courseid    (int, optional) Course ID; 0 = all courses.
- *   instanceids (int[], optional) Filter to several mod_adaptivequiz instances.
- *   instanceid  (int, optional) Legacy single-instance filter (fallback).
+ *   courseid    (int, optional)   Course ID; 0 = all courses.
+ *   moduleid    (string, optional) Active module: 'results'|'usage'|…. Default 'results'.
+ *   instanceids (int[], optional)  Filter to several mod_adaptivequiz instances.
+ *   instanceid  (int, optional)   Legacy single-instance filter (fallback).
  *   startdate   (string YYYY-MM-DD, optional) Attempt start lower bound.
  *   enddate     (string YYYY-MM-DD, optional) Attempt start upper bound.
- *   export      (string 'csv'|'json'|'excel'|'ods', optional) Trigger download and exit.
+ *   export      (string 'csv'|'json'|'excel'|'ods', optional) Trigger download.
  *
  * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
@@ -37,29 +38,35 @@
 require_once('../../config.php');
 
 use block_catquiz_statistics\export\attempt_results_exporter;
+use block_catquiz_statistics\export\exporter_factory;
 use block_catquiz_statistics\output\report_page;
-use block_catquiz_statistics\report\attempt_results_report;
 use block_catquiz_statistics\repository\attempt_filter;
 use block_catquiz_statistics\repository\attempt_repository;
 
-$courseid   = optional_param('courseid', 0, PARAM_INT);
-$startdate  = optional_param('startdate', '', PARAM_ALPHANUMEXT);
-$enddate    = optional_param('enddate', '', PARAM_ALPHANUMEXT);
-$export     = optional_param('export', '', PARAM_ALPHA);
+$courseid  = optional_param('courseid', 0, PARAM_INT);
+$moduleid  = optional_param('moduleid', 'results', PARAM_ALPHA);
+$startdate = optional_param('startdate', '', PARAM_ALPHANUMEXT);
+$enddate   = optional_param('enddate', '', PARAM_ALPHANUMEXT);
+$export    = optional_param('export', '', PARAM_ALPHA);
 
 $systemcontext = context_system::instance();
 
 require_login();
 \block_catquiz_statistics\access::require_viewall();
 
+// Resolve the active module; fall back to 'a' for unknown IDs.
+$allowedmodules = ['results', 'usage', 'progress'];
+if (!in_array($moduleid, $allowedmodules, true)) {
+    $moduleid = 'results';
+}
+
 $filter = attempt_filter::from_request_systemwide();
 
 $repo   = new attempt_repository();
-$report = new attempt_results_report($repo);
+$report = exporter_factory::create_report($moduleid, $repo);
 
 // Handle export before any HTML output.
 if ($export !== '') {
-    // Multi-sheet (8 sheets) for spreadsheet formats; single sheet for csv/json.
     $mode = in_array($export, ['excel', 'ods'], true) ? 'multi' : 'wide';
     (new attempt_results_exporter())->export($report, $filter, $export, $mode);
     exit;
@@ -77,10 +84,8 @@ $PAGE->navbar->add(
 
 $schemaok = $repo->check_schema_compatibility();
 
-// Courses with attempts for the dropdown.
-$courses = $schemaok ? $repo->get_courses_with_attempts() : [];
+$courses  = $schemaok ? $repo->get_courses_with_attempts() : [];
 
-// Instances: filtered by course when one is selected, otherwise system-wide.
 if ($courseid > 0 && $schemaok) {
     $instances = $repo->get_catquiz_instances_for_course($courseid);
 } else {
@@ -102,7 +107,8 @@ $reportpage = new report_page(
     issystemwide: true,
     courses: $courses,
     selectedcourseid: $courseid,
-    reporturlpath: '/blocks/catquiz_statistics/adminreport.php'
+    reporturlpath: '/blocks/catquiz_statistics/adminreport.php',
+    moduleid: $moduleid
 );
 
 echo $OUTPUT->header();

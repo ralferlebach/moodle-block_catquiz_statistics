@@ -12,6 +12,8 @@
     * schemaerror           - bool    - True if local_catquiz is not installed.
     * schemaerrortext       - string  - Schema missing message.
     * filterlabel           - string  - "Filter" label.
+    * tabs                  - array   - [{id, label, active, enabled, url}] module tabs.
+    * activemoduleid        - string  - Active module ID.
     * issystemwide          - bool    - True for the admin system-wide report.
     * courselabel           - string  - Course selector label (system-wide only).
     * courseoptions         - array   - [{value, label, selected}] course dropdown.
@@ -38,15 +40,21 @@
 
     Example context (json):
     {
-        "courseid": 0,
-        "reporturl": "/blocks/catquiz_statistics/adminreport.php",
-        "heading": "CAT Quiz Statistics – System Report",
+        "courseid": 2,
+        "reporturl": "/blocks/catquiz_statistics/report.php",
+        "heading": "CAT Quiz Statistics",
         "schemaerror": false,
         "schemaerrortext": "",
         "filterlabel": "Filter",
-        "issystemwide": true,
+        "tabs": [
+            {"id": "results",  "label": "Test Results",  "active": true,  "enabled": true,  "url": "?moduleid=results&courseid=2"},
+            {"id": "usage",    "label": "Test Usage",    "active": false, "enabled": true,  "url": "?moduleid=usage&courseid=2"},
+            {"id": "progress", "label": "Test Progress", "active": false, "enabled": false, "url": "#"}
+        ],
+        "activemoduleid": "results",
+        "issystemwide": false,
         "courselabel": "Course",
-        "courseoptions": [{"value": "0", "label": "(all courses)", "selected": true}],
+        "courseoptions": [],
         "instanceslabel": "CAT Quiz instances",
         "instancecheckboxes": [{"value": "1", "label": "My Quiz (12)", "checked": false}],
         "noinstancesmsg": "No instances found.",
@@ -61,8 +69,8 @@
         "noattemptsmsg": "No attempts match the current filter.",
         "tableheaders": [{"label": "Name"}],
         "tablerows": [],
-        "exporturl": "/blocks/catquiz_statistics/adminreport.php",
-        "exportcourseid": 0,
+        "exporturl": "/blocks/catquiz_statistics/report.php",
+        "exportcourseid": 2,
         "appliedinstanceids": [],
         "formatoptions": [{"value": "csv", "label": "CSV", "selected": true}],
         "exportformatlabel": "Export format",
@@ -79,11 +87,28 @@
 
     {{^schemaerror}}
 
+    {{! Module navigation tabs }}
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        {{#tabs}}
+        <li class="nav-item" role="presentation">
+            {{#enabled}}
+            <a class="nav-link{{#active}} active{{/active}}"
+               href="{{{url}}}" role="tab">{{label}}</a>
+            {{/enabled}}
+            {{^enabled}}
+            <a class="nav-link disabled" href="#" tabindex="-1"
+               aria-disabled="true">{{label}}</a>
+            {{/enabled}}
+        </li>
+        {{/tabs}}
+    </ul>
+
     {{! Filter form }}
     <div class="card mb-4">
         <div class="card-header">{{filterlabel}}</div>
         <div class="card-body">
             <form method="get" action="{{{reporturl}}}">
+                <input type="hidden" name="moduleid" value="{{activemoduleid}}">
                 {{^issystemwide}}
                 <input type="hidden" name="courseid" value="{{courseid}}">
                 {{/issystemwide}}
@@ -137,6 +162,7 @@
     <div class="d-flex justify-content-between align-items-center mb-2">
         <span class="text-muted">{{attemptcountlabel}} <strong>{{attemptcount}}</strong></span>
         <form method="get" action="{{{exporturl}}}" class="form-inline">
+            <input type="hidden" name="moduleid" value="{{activemoduleid}}">
             <input type="hidden" name="courseid" value="{{exportcourseid}}">
             {{#appliedinstanceids}}
             <input type="hidden" name="instanceids[]" value="{{value}}">
