@@ -150,26 +150,17 @@ class report_page implements renderable, templatable {
     public function export_for_template(renderer_base $output): array {
         $plugin = 'block_catquiz_statistics';
 
-        // Display column headers (browser table, not export).
-        $displayheaders = [
-            get_string('report:col_firstname', $plugin) . ' ' . get_string('report:col_lastname', $plugin),
-            get_string('report:col_starttime', $plugin),
-            get_string('report:col_duration_fmt', $plugin),
-            get_string('report:col_used_testitems', $plugin),
-            get_string('report:col_status', $plugin),
-            get_string('report:col_scale_name', $plugin),
-            'PP',
-            'SE',
-        ];
+        // Module-aware display headers and row builder.
+        $displayheaders = $this->get_display_headers($plugin);
         $headers = [];
         foreach ($displayheaders as $h) {
             $headers[] = ['label' => $h];
         }
 
-        // Build table rows.
+        // Build table rows using the module-specific cell builder.
         $tablerows = [];
         foreach ($this->flatrows as $row) {
-            $tablerows[] = ['cells' => $this->build_display_cells($row)];
+            $tablerows[] = ['cells' => $this->build_display_cells_for_module($row, $plugin)];
         }
 
         // Build instance checkbox list (multi-select). Empty selection = all instances.
@@ -251,30 +242,190 @@ class report_page implements renderable, templatable {
             'exportbuttonlabel' => get_string('report:export_button', $plugin),
             'tabs'             => $tabs,
             'activemoduleid'   => $this->moduleid,
+            'modulenotice'     => $this->get_module_notice($plugin),
+            'hasmodulenotice'  => $this->get_module_notice($plugin) !== '',
         ];
     }
 
     /**
-     * Build the display cells array for one flat row.
+     * Return browser-table column headers for the active module.
      *
-     * Only a subset of columns is shown in the browser table (full data is
-     * available via export).
-     *
-     * @param array $row Flat row from attempt_results_report::get_flat_rows().
-     * @return array[] Array of ['v' => value] cells.
+     * @param string $plugin Plugin identifier for get_string().
+     * @return string[]
      */
-    private function build_display_cells(array $row): array {
-        // Name.
+    private function get_display_headers(string $plugin): array {
+        switch ($this->moduleid) {
+            case 'usage':
+                return [
+                    get_string('report:col_firstname', $plugin) . ' '
+                        . get_string('report:col_lastname', $plugin),
+                    get_string('report:col_testname', $plugin),
+                    get_string('report:col_attempt_rank', $plugin),
+                    get_string('report:col_starttime', $plugin),
+                    get_string('report:col_status', $plugin),
+                    get_string('report:col_global_pp', $plugin),
+                    get_string('report:col_global_se', $plugin),
+                    get_string('report:col_delta_ability', $plugin),
+                    get_string('report:col_rci', $plugin),
+                ];
+            case 'progress':
+                return [
+                    get_string('report:col_firstname', $plugin) . ' '
+                        . get_string('report:col_lastname', $plugin),
+                    get_string('report:col_attemptid', $plugin),
+                    get_string('report:col_step_nr', $plugin),
+                    get_string('report:col_questionname', $plugin),
+                    get_string('report:col_questionscale_name', $plugin),
+                    get_string('report:col_difficulty', $plugin),
+                    get_string('report:col_lastresponse', $plugin),
+                    get_string('report:col_personability_after', $plugin),
+                ];
+            case 'items':
+                return [
+                    get_string('report:col_questionname', $plugin),
+                    get_string('report:col_questionscale_name', $plugin),
+                    get_string('report:col_difficulty', $plugin),
+                    get_string('report:col_n_presented', $plugin),
+                    get_string('report:col_frac_correct', $plugin),
+                    get_string('report:col_mean_response', $plugin),
+                    get_string('report:col_mean_fisher', $plugin),
+                    get_string('report:col_mean_ability_before', $plugin),
+                ];
+            case 'activity':
+                return [];
+            default:
+                return [
+                    get_string('report:col_firstname', $plugin) . ' '
+                        . get_string('report:col_lastname', $plugin),
+                    get_string('report:col_starttime', $plugin),
+                    get_string('report:col_duration_fmt', $plugin),
+                    get_string('report:col_used_testitems', $plugin),
+                    get_string('report:col_status', $plugin),
+                    get_string('report:col_global_scale_name', $plugin),
+                    get_string('report:col_global_pp', $plugin),
+                    get_string('report:col_global_se', $plugin),
+                ];
+        }
+    }
+
+    /**
+     * Dispatch to the module-specific cell builder.
+     *
+     * @param array $row Flat row from the active report module.
+     * @param string $plugin Plugin identifier.
+     * @return array[]
+     */
+    private function build_display_cells_for_module(array $row, string $plugin): array {
+        switch ($this->moduleid) {
+            case 'usage':
+                return $this->cells_usage($row);
+            case 'progress':
+                return $this->cells_progress($row);
+            case 'items':
+                return $this->cells_items($row);
+            case 'activity':
+                return [];
+            default:
+                return $this->build_display_cells($row);
+        }
+    }
+
+    /**
+     * Display cells for Modul B (Testnutzung).
+     *
+     * @param array $row Flat row from test_usage_report.
+     * @return array[]
+     */
+    private function cells_usage(array $row): array {
         $name = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? ''));
         if ($name === '') {
             $name = $row['username'] ?? '?';
         }
-
-        // Start time — localized via userdate().
         $starttime = !empty($row['starttime'])
             ? userdate($row['starttime'], get_string('strftimerecentfull', 'langconfig')) : '-';
+        $pp    = $row['global_pp'] !== null ? number_format((float) $row['global_pp'], 3) : '-';
+        $se    = $row['global_se'] !== null ? number_format((float) $row['global_se'], 3) : '-';
+        $delta = $row['delta_ability'] !== null ? number_format((float) $row['delta_ability'], 3) : '-';
+        $rci   = $row['rci'] !== null ? number_format((float) $row['rci'], 2) : '-';
+        return [
+            ['v' => $name],
+            ['v' => $row['testname'] ?? '-'],
+            ['v' => $row['attempt_rank'] ?? '-'],
+            ['v' => $starttime],
+            ['v' => $row['status'] ?? '-'],
+            ['v' => $pp],
+            ['v' => $se],
+            ['v' => $delta],
+            ['v' => $rci],
+        ];
+    }
 
-        // Duration in minutes and seconds.
+    /**
+     * Display cells for Modul C (Testverlauf).
+     *
+     * @param array $row Flat row from test_progress_report.
+     * @return array[]
+     */
+    private function cells_progress(array $row): array {
+        $name = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+        if ($name === '') {
+            $name = $row['username'] ?? '?';
+        }
+        $diff = $row['difficulty'] !== null ? number_format((float) $row['difficulty'], 3) : '-';
+        $resp = $row['lastresponse'] !== null ? number_format((float) $row['lastresponse'], 2) : '-';
+        $abil = $row['personability_after'] !== null ? number_format((float) $row['personability_after'], 3) : '-';
+        return [
+            ['v' => $name],
+            ['v' => $row['attemptid'] ?? '-'],
+            ['v' => $row['step_nr'] ?? '-'],
+            ['v' => $row['questionname'] ?? '-'],
+            ['v' => $row['questionscale_name'] ?? '-'],
+            ['v' => $diff],
+            ['v' => $resp],
+            ['v' => $abil],
+        ];
+    }
+
+    /**
+     * Display cells for Modul E (Item- und Antwortanalyse).
+     *
+     * @param array $row Flat row from item_analysis_report.
+     * @return array[]
+     */
+    private function cells_items(array $row): array {
+        $diff = $row['difficulty'] !== null ? number_format((float) $row['difficulty'], 3) : '-';
+        $frac = $row['frac_correct'] !== null
+            ? number_format((float) $row['frac_correct'] * 100, 1) . ' %' : '-';
+        $resp = $row['mean_response'] !== null ? number_format((float) $row['mean_response'], 3) : '-';
+        $fish = $row['mean_fisher'] !== null ? number_format((float) $row['mean_fisher'], 3) : '-';
+        $abil = $row['mean_ability_before'] !== null ? number_format((float) $row['mean_ability_before'], 3) : '-';
+        return [
+            ['v' => $row['questionname'] ?? '-'],
+            ['v' => $row['questionscale_name'] ?? '-'],
+            ['v' => $diff],
+            ['v' => $row['n_presented'] ?? '-'],
+            ['v' => $frac],
+            ['v' => $resp],
+            ['v' => $fish],
+            ['v' => $abil],
+        ];
+    }
+
+    /**
+     * Display cells for Modul A (Testergebnisse).
+     *
+     * Only a subset of columns is shown in the browser table; full data via export.
+     *
+     * @param array $row Flat row from attempt_results_report.
+     * @return array[]
+     */
+    private function build_display_cells(array $row): array {
+        $name = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+        if ($name === '') {
+            $name = $row['username'] ?? '?';
+        }
+        $starttime = !empty($row['starttime'])
+            ? userdate($row['starttime'], get_string('strftimerecentfull', 'langconfig')) : '-';
         $duration = '-';
         if (isset($row['duration_s']) && $row['duration_s'] !== null) {
             $secs = (int) $row['duration_s'];
@@ -282,16 +433,10 @@ class report_page implements renderable, templatable {
             $rem  = $secs % 60;
             $duration = $mins > 0 ? $mins . ' min ' . $rem . ' s' : $rem . ' s';
         }
-
-        // PP and SE — formatted to 2 decimal places, or '-' /  'n/v' for null.
-        // Catquiz often stores no SE for the root scale; fall back to primary_se.
         $globalpp = isset($row['global_pp']) && $row['global_pp'] !== null
             ? number_format((float) $row['global_pp'], 2) : '-';
-        // SE is stored in attempts.json under the global (root) scale ID.
-        // 'n/v' means SE validation (semax threshold) filtered the value.
         $globalse = $row['global_se'] !== null
             ? number_format((float) $row['global_se'], 2) : 'n/v';
-
         return [
             ['v' => $name],
             ['v' => $starttime],
@@ -326,6 +471,22 @@ class report_page implements renderable, templatable {
     }
 
     /**
+     * Return an optional notice string for the active module.
+     *
+     * Returns a non-empty string when the module needs a UI notice
+     * (e.g. disabled opt-in feature). Returns '' otherwise.
+     *
+     * @param string $plugin Plugin identifier.
+     * @return string
+     */
+    private function get_module_notice(string $plugin): string {
+        if ($this->moduleid === 'activity') {
+            return get_string('report:activity_disabled', $plugin);
+        }
+        return '';
+    }
+
+    /**
      * Build the module tab definitions for the Mustache template.
      *
      * Active modules (a, b) are clickable links. Future modules (c–e) are
@@ -344,8 +505,8 @@ class report_page implements renderable, templatable {
             'results' => ['label' => get_string('module_a', $plugin), 'enabled' => true],
             'usage'   => ['label' => get_string('module_b', $plugin), 'enabled' => true],
             'progress' => ['label' => get_string('module_c', $plugin), 'enabled' => true],
-            'activity' => ['label' => get_string('module_d', $plugin), 'enabled' => false],
-            'items'    => ['label' => get_string('module_e', $plugin), 'enabled' => false],
+            'activity' => ['label' => get_string('module_d', $plugin), 'enabled' => true],
+            'items'    => ['label' => get_string('module_e', $plugin), 'enabled' => true],
         ];
 
         $tabs = [];

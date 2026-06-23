@@ -14,6 +14,8 @@
     * filterlabel           - string  - "Filter" label.
     * tabs                  - array   - [{id, label, active, enabled, url}] module tabs.
     * activemoduleid        - string  - Active module ID.
+    * modulenotice          - string  - Optional notice for the active module (e.g. disabled).
+    * hasmodulenotice       - bool    - True when modulenotice is non-empty.
     * issystemwide          - bool    - True for the admin system-wide report.
     * courselabel           - string  - Course selector label (system-wide only).
     * courseoptions         - array   - [{value, label, selected}] course dropdown.
@@ -102,6 +104,10 @@
         </li>
         {{/tabs}}
     </ul>
+
+    {{#hasmodulenotice}}
+    <div class="alert alert-info" role="alert">{{modulenotice}}</div>
+    {{/hasmodulenotice}}
 
     {{! Filter form }}
     <div class="card mb-4">

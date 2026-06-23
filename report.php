@@ -67,7 +67,7 @@ require_login($course);
 \block_catquiz_statistics\access::require_viewdetails($context);
 
 // Resolve the active module; fall back to 'a' for unknown IDs.
-$allowedmodules = ['results', 'usage', 'progress'];
+$allowedmodules = ['results', 'usage', 'progress', 'activity', 'items'];
 if (!in_array($moduleid, $allowedmodules, true)) {
     $moduleid = 'results';
 }

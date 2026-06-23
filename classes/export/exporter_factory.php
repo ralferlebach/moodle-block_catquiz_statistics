@@ -53,6 +53,10 @@ class exporter_factory {
                 return new \block_catquiz_statistics\report\test_usage_report($repository);
             case 'progress':
                 return new \block_catquiz_statistics\report\test_progress_report($repository);
+            case 'activity':
+                return new \block_catquiz_statistics\report\learning_activity_report($repository);
+            case 'items':
+                return new \block_catquiz_statistics\report\item_analysis_report($repository);
             default:
                 throw new \coding_exception(
                     'Unknown report module id: ' . $moduleid
