@@ -156,7 +156,12 @@ class attempt_repository {
             $sql .= ' AND a.courseid = :courseid';
             $params['courseid'] = $filter->courseid;
         }
-        if ($filter->instanceid !== null) {
+        if (!empty($filter->instanceids)) {
+            // Multi-select takes precedence over the single instanceid fallback.
+            [$insql, $inparams] = $DB->get_in_or_equal($filter->instanceids, SQL_PARAMS_NAMED, 'inst');
+            $sql .= ' AND a.instanceid ' . $insql;
+            $params += $inparams;
+        } else if ($filter->instanceid !== null) {
             $sql .= ' AND a.instanceid = :instanceid';
             $params['instanceid'] = $filter->instanceid;
         }

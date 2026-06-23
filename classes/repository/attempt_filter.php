@@ -34,8 +34,19 @@ class attempt_filter {
     /** @var int Mandatory course scope (0 = system-wide, requires viewall). */
     public readonly int $courseid;
 
-    /** @var int|null Restrict to a single mod_adaptivequiz instance. */
+    /** @var int|null Restrict to a single mod_adaptivequiz instance (legacy single-select fallback). */
     public readonly ?int $instanceid;
+
+    /**
+     * Restrict to several mod_adaptivequiz instances (multi-select).
+     *
+     * When this array is non-empty it takes precedence over {@see self::$instanceid}.
+     * An empty array (or null) means "no instance restriction" (all instances).
+     * Holds integer instance IDs.
+     *
+     * @var int[]|null
+     */
+    public readonly ?array $instanceids;
 
     /** @var int|null Restrict to a specific CAT scale. */
     public readonly ?int $scaleid;
@@ -52,12 +63,13 @@ class attempt_filter {
     /**
      * Constructor – all parameters optional except courseid.
      *
-     * @param int      $courseid   Mandatory course scope.
-     * @param int|null $instanceid Restrict to a single mod_adaptivequiz instance.
-     * @param int|null $scaleid    Restrict to a specific CAT scale.
-     * @param int|null $starttime  Unix timestamp lower bound.
-     * @param int|null $endtime    Unix timestamp upper bound.
-     * @param bool     $systemwide Allow cross-course query.
+     * @param int      $courseid    Mandatory course scope.
+     * @param int|null $instanceid  Restrict to a single mod_adaptivequiz instance (legacy fallback).
+     * @param int|null $scaleid     Restrict to a specific CAT scale.
+     * @param int|null $starttime   Unix timestamp lower bound.
+     * @param int|null $endtime     Unix timestamp upper bound.
+     * @param bool     $systemwide  Allow cross-course query.
+     * @param int[]|null $instanceids Restrict to several instances (takes precedence over $instanceid when non-empty).
      */
     public function __construct(
         int $courseid,
@@ -65,7 +77,8 @@ class attempt_filter {
         ?int $scaleid = null,
         ?int $starttime = null,
         ?int $endtime = null,
-        bool $systemwide = false
+        bool $systemwide = false,
+        ?array $instanceids = null
     ) {
         $this->courseid   = $courseid;
         $this->instanceid = $instanceid;
@@ -73,16 +86,30 @@ class attempt_filter {
         $this->starttime  = $starttime;
         $this->endtime    = $endtime;
         $this->systemwide = $systemwide;
+        // Normalise to a clean list of distinct positive integers, or null when empty.
+        if (!empty($instanceids)) {
+            $clean = array_values(array_unique(array_filter(
+                array_map('intval', $instanceids),
+                static fn($id) => $id > 0
+            )));
+            $this->instanceids = !empty($clean) ? $clean : null;
+        } else {
+            $this->instanceids = null;
+        }
     }
 
     /**
      * Build a filter from current HTTP request parameters.
      *
+     * Reads the multi-select instanceids[] array; falls back to the single
+     * instanceid parameter when no array is provided.
+     *
      * @param int      $courseid   Course ID (already resolved by caller).
-     * @param int|null $instanceid Optional instance override.
+     * @param int|null $instanceid Optional single instance override (legacy fallback).
      * @return self
      */
     public static function from_request(int $courseid, ?int $instanceid = null): self {
+        $instanceids = optional_param_array('instanceids', [], PARAM_INT);
         $instanceid = $instanceid ?? (optional_param('instanceid', 0, PARAM_INT) ?: null);
         $scaleid = optional_param('scaleid', 0, PARAM_INT) ?: null;
         $starttime = optional_param('starttime', 0, PARAM_INT) ?: null;
@@ -94,6 +121,7 @@ class attempt_filter {
             scaleid: $scaleid,
             starttime: $starttime,
             endtime: $endtime,
+            instanceids: $instanceids,
         );
     }
     /**
@@ -108,6 +136,7 @@ class attempt_filter {
     public static function from_request_systemwide(): self {
         $courseid   = optional_param('courseid', 0, PARAM_INT);
         $instanceid = optional_param('instanceid', 0, PARAM_INT) ?: null;
+        $instanceids = optional_param_array('instanceids', [], PARAM_INT);
         $scaleid    = optional_param('scaleid', 0, PARAM_INT) ?: null;
         $starttime  = null;
         $endtime    = null;
@@ -126,6 +155,7 @@ class attempt_filter {
             starttime: $starttime,
             endtime: $endtime,
             systemwide: true,
+            instanceids: $instanceids,
         );
     }
 }

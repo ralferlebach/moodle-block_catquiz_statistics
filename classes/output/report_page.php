@@ -166,30 +166,48 @@ class report_page implements renderable, templatable {
             $tablerows[] = ['cells' => $this->build_display_cells($row)];
         }
 
-        // Build instance dropdown options.
-        $instanceoptions = [
-            [
-                'value'    => '0',
-                'label'    => get_string('report:filter_all_instances', $plugin),
-                'selected' => $this->filter->instanceid === null,
-            ],
-        ];
+        // Build instance checkbox list (multi-select). Empty selection = all instances.
+        // Applied set respects the multi-select instanceids, falling back to the legacy single instanceid.
+        $applied = $this->filter->instanceids
+            ?? ($this->filter->instanceid !== null ? [$this->filter->instanceid] : []);
+        $instancecheckboxes = [];
         foreach ($this->instances as $inst) {
             $label = !empty($inst->testname) ? $inst->testname : 'Instance ' . $inst->instanceid;
             $label .= ' (' . $inst->attemptcount . ')';
-            $instanceoptions[] = [
-                'value'    => (string) $inst->instanceid,
-                'label'    => $label,
-                'selected' => $this->filter->instanceid === (int) $inst->instanceid,
+            $instancecheckboxes[] = [
+                'value'   => (string) $inst->instanceid,
+                'label'   => $label,
+                'checked' => in_array((int) $inst->instanceid, $applied, true),
             ];
         }
 
-        // Build export URLs.
-        $baseurl   = new moodle_url($this->reporturlpath);
-        $urlparams = $this->filter_to_url_params();
+        // Applied instance IDs as hidden inputs for the export form (keeps export in sync with the filter).
+        $appliedinstanceids = [];
+        foreach ($applied as $id) {
+            $appliedinstanceids[] = ['value' => (string) $id];
+        }
 
-        $csvurl = new moodle_url($baseurl, array_merge($urlparams, ['export' => 'csv']));
-        $xlsurl = new moodle_url($baseurl, array_merge($urlparams, ['export' => 'excel']));
+        // Build export format options. Default selection comes from the admin setting.
+        $defaultformat = get_config('block_catquiz_statistics', 'defaultformat') ?: 'csv';
+        $formatlabels = [
+            'csv'   => get_string('report:format_csv', $plugin),
+            'json'  => get_string('report:format_json', $plugin),
+            'excel' => get_string('report:format_excel', $plugin),
+            'ods'   => get_string('report:format_ods', $plugin),
+        ];
+        $formatoptions = [];
+        foreach ($formatlabels as $value => $flabel) {
+            $formatoptions[] = [
+                'value'    => $value,
+                'label'    => $flabel,
+                'selected' => $value === $defaultformat,
+            ];
+        }
+
+        // Course ID carried into the export form (system-wide uses the selected course, 0 = all).
+        $exportcourseid = $this->issystemwide ? $this->selectedcourseid : $this->courseid;
+
+        $baseurl = new moodle_url($this->reporturlpath);
 
         return [
             'courseid'        => $this->courseid,
@@ -199,14 +217,15 @@ class report_page implements renderable, templatable {
             'schemaerrortext' => !$this->schemaok
                 ? get_string('report_schema_missing', $plugin) : '',
             'filterlabel'     => get_string('filter', 'moodle'),
-            'instancelabel'   => get_string('report:filter_instance', $plugin),
+            'instanceslabel'  => get_string('report:filter_instances', $plugin),
             'startdatelabel'  => get_string('report:filter_startdate', $plugin),
             'enddatelabel'    => get_string('report:filter_enddate', $plugin),
             'applylabel'      => get_string('report:filter_apply', $plugin),
             'issystemwide'  => $this->issystemwide,
             'courselabel'   => get_string('report:filter_course', $plugin),
             'courseoptions' => $this->build_course_options(),
-            'instanceoptions' => $instanceoptions,
+            'instancecheckboxes' => $instancecheckboxes,
+            'noinstancesmsg'  => get_string('report:filter_no_instances', $plugin),
             'startdate'       => $this->startdate,
             'enddate'         => $this->enddate,
             'attemptcountlabel' => get_string('report:n_attempts', $plugin),
@@ -215,10 +234,12 @@ class report_page implements renderable, templatable {
             'noattemptsmsg'   => get_string('report:noattempts', $plugin),
             'tableheaders'    => $headers,
             'tablerows'       => $tablerows,
-            'exportcsvlabel'  => get_string('report:export_csv', $plugin),
-            'exportexcellabel' => get_string('report:export_excel', $plugin),
-            'exportcsvurl'    => $csvurl->out(false),
-            'exportexcelurl'  => $xlsurl->out(false),
+            'exporturl'        => $baseurl->out(false),
+            'exportcourseid'   => $exportcourseid,
+            'appliedinstanceids' => $appliedinstanceids,
+            'formatoptions'    => $formatoptions,
+            'exportformatlabel' => get_string('report:export_format', $plugin),
+            'exportbuttonlabel' => get_string('report:export_button', $plugin),
         ];
     }
 

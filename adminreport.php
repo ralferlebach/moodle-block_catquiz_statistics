@@ -22,11 +22,12 @@
  * all courses; optional courseid parameter restricts to a single course.
  *
  * URL parameters:
- *   courseid   (int, optional) Course ID; 0 = all courses.
- *   instanceid (int, optional) Filter to a single mod_adaptivequiz instance.
- *   startdate  (string YYYY-MM-DD, optional) Attempt start lower bound.
- *   enddate    (string YYYY-MM-DD, optional) Attempt start upper bound.
- *   export     (string 'csv'|'excel', optional) Trigger file download and exit.
+ *   courseid    (int, optional) Course ID; 0 = all courses.
+ *   instanceids (int[], optional) Filter to several mod_adaptivequiz instances.
+ *   instanceid  (int, optional) Legacy single-instance filter (fallback).
+ *   startdate   (string YYYY-MM-DD, optional) Attempt start lower bound.
+ *   enddate     (string YYYY-MM-DD, optional) Attempt start upper bound.
+ *   export      (string 'csv'|'json'|'excel'|'ods', optional) Trigger download and exit.
  *
  * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
@@ -58,7 +59,8 @@ $report = new attempt_results_report($repo);
 
 // Handle export before any HTML output.
 if ($export !== '') {
-    $mode = ($export === 'excel') ? 'multi' : 'wide';
+    // Multi-sheet (8 sheets) for spreadsheet formats; single sheet for csv/json.
+    $mode = in_array($export, ['excel', 'ods'], true) ? 'multi' : 'wide';
     (new attempt_results_exporter())->export($report, $filter, $export, $mode);
     exit;
 }
