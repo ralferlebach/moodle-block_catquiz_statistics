@@ -37,7 +37,32 @@ Haupt-Dependencies:
 
 ---
 
-### D) Ziel dieser Sitzung
+### D) Aktueller Entwicklungsstand
+
+**Version:** 0.4.1 (2026062301)
+
+**Zuletzt abgeschlossen (Session 003):**
+  - Checkbox-Mehrfachauswahl für CAT-Quiz-Instanzen (Filter)
+  - Format-Dropdown {CSV · JSON · XLSX · ODS} mit automatischem multi/wide-Mode
+  - Main-CI-Fix: DB-Credentials in moodle-release.yml explizit je Matrix-Eintrag
+  - courseid=0-Guard in report.php (Redirect statt DB-Exception)
+  - 8 neue Lang-Strings (EN + DE, alphabetisch)
+  - Zone.Identifier-Artefakte entfernt
+  - Alle Lint- und Unit-Tests lokal grün bestätigt
+
+**Als nächstes geplant:**
+  Phase 2a — Modul B (Testnutzung / RCI):
+    - attempt_results_report: RCI-Berechnung Δability / √(SE_first² + SE_last²)
+    - Mehrfachversuch-Erkennung pro User und Instanz
+    - Neue Export-Spalten: rci, attempt_rank, delta_ability
+  Phase 2b — Modul C (Testverlauf):
+    - Neue Klasse test_progress_report
+    - graphicalsummary_data (Schicht 2, immer verfügbar)
+    - debug_info (Schicht 3, optional, nur wenn store_debug_info=true)
+
+---
+
+### E) Ziel dieser Sitzung
 
 Wir knüpfen an die Arbeiten an, die im aktuellen Kontext-Dokument
 und in der angehängten Code-Base vorliegen, und gehen, wenn der letzte
@@ -45,7 +70,7 @@ Arbeitsschritt als vollumfänglich erfüllt angesehen wird, zum nächsten
 vorgesehenen Schritt in der Umsetzung über.
 
 Phasenplan (zur Orientierung):
-  Phase 1 – Testergebnisse (MVP): attempt_repository, Exporter, Report-Seite
+  Phase 1 – Testergebnisse (MVP): ABGESCHLOSSEN
   Phase 2 – Testnutzung + RCI, Testverlauf (QE-Join / graphicalsummary)
   Phase 3 – Item- und Antwortanalyse, Lernangebotsnutzung (opt-in)
 
@@ -61,6 +86,11 @@ Schlüssel-Entwurfsentscheidungen (nicht verändern ohne explizite Diskussion):
   7. Privacy: metadata\provider only (MVP).
   8. CI: --no-init + manuelles init.php; phpunit.xml mit bootstrap-Attribut;
      Dependency-Tags wb-0.9.0-rc2 / 1.0.2.
+  9. attempt_filter: instanceids (Array, Mehrfachauswahl) hat Vorrang vor
+     instanceid (Single-Fallback, Abwärtskompatibilität). Beide bleiben erhalten.
+ 10. courseid=0-Guard in report.php: redirect('/') statt DB-Exception.
+ 11. Funktionsbereichsnamen im UI: "Testergebnisse", "Testverlauf", "Item- und
+     Antwortanalyse" — nie interne Modulbuchstaben (A/B/C).
 
 Bekannte Stolperfallen (aus CI-Debugging gelernt):
   - Lang-Dateien: alphabetisch sortiert, keine Kommentar-Trennzeilen
@@ -73,18 +103,19 @@ Bekannte Stolperfallen (aus CI-Debugging gelernt):
   - Behat: keine Permission-Denial-Tests per Browser (look_for_exceptions)
   - @javascript nur für echte JS-Interaktionen
   - Multi-Sheet-Export: Writer-Klasse direkt, nicht dataformat::download_data
-  - array<Type> in @param/@return durch moodlecheck nicht vollständig geparst;
-    stattdessen plain array mit Erläuterung im Beschreibungstext verwenden
+  - array<Type> in @param/@return: plain array mit Erläuterung im Beschreibungstext
+  - moodle-release.yml: DB-Credentials explizit je Matrix-Eintrag übergeben
+  - report.php: courseid < 1 → redirect('/') vor dem ersten DB-Aufruf
 
 ---
 
-### E) Modus zur Delivery
+### F) Modus zur Delivery
 
-- Code-Changes immer ausliefern als **Patch-ZIP**: eine ZIP-Datei, die NUR
+- Code-Changes immer ausliefern als Patch-ZIP: eine ZIP-Datei, die NUR
   die geänderten Dateien enthält (kein .git-Ordner, keine docs/-Dateien)
 - Patch-ZIPs erhalten einen durchnummerierten Namen (patch-0.X.YY.zip),
   die Version in version.php orientiert sich am aktuellen Datum und wird
-  mit jeder Iteration hochgezählt (Format: YYYYMMDDNN, z.B. 2026061700)
+  mit jeder Iteration hochgezählt (Format: YYYYMMDDNN, z.B. 2026062301)
 - Zu jeder Änderung eine einzeilige Kurzbeschreibung des Commits (englisch)
   sowie bis zu 5 Stichpunkte zu den vorgenommenen Änderungen.
   Diese Angaben als MD-Code DIREKT UNTER dem Download-Link der Patch-ZIP
@@ -104,7 +135,7 @@ Bekannte Stolperfallen (aus CI-Debugging gelernt):
 - Author: Ralf Erlebach, Jahr: 2025, Lizenz: GPL v3 or later
 - Bei Unklarheiten und auftretenden Fehlern: Shell-Skripte, SQL-Abfragen
   und JS-Skripte für die Konsole mitliefern. Diagnose-Skripte werden
-  **grundsätzlich nur im Chat-Fenster** ausgeliefert, nie als Download!
+  grundsätzlich nur im Chat-Fenster ausgeliefert, nie als Download!
 
 Bevor du beginnst:
 1. Bestätige kurz, was du aus dem Kontext-Dokument und den

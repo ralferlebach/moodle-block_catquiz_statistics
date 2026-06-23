@@ -17,16 +17,21 @@
 /**
  * Course-level statistics report page for block_catquiz_statistics.
  *
- * Displays a filterable table of CAT quiz attempts with export buttons for
- * CSV and multi-sheet Excel.  Access requires both the block capability
- * viewdetails AND local/catquiz:view_users_feedback.
+ * Displays a filterable table of CAT quiz attempts with a format selector
+ * for CSV / JSON / XLSX / ODS export.  Access requires both the block
+ * capability viewdetails AND local/catquiz:view_users_feedback.
  *
  * URL parameters:
- *   courseid   (int, required) Course ID.
- *   instanceid (int, optional) Filter to a single mod_adaptivequiz instance.
- *   startdate  (string YYYY-MM-DD, optional) Attempt start lower bound.
- *   enddate    (string YYYY-MM-DD, optional) Attempt start upper bound.
- *   export     (string 'csv'|'excel', optional) Trigger file download and exit.
+ *   courseid    (int, required)  Course ID; must be a positive integer.
+ *   instanceids (int[], optional) Filter to several mod_adaptivequiz instances.
+ *   instanceid  (int, optional)  Legacy single-instance filter (fallback).
+ *   startdate   (string YYYY-MM-DD, optional) Attempt start lower bound.
+ *   enddate     (string YYYY-MM-DD, optional) Attempt start upper bound.
+ *   export      (string 'csv'|'json'|'excel'|'ods', optional) Trigger download and exit.
+ *
+ * Robustness note: courseid=0 can arrive from theme-generated pagination links
+ * when the page URL has been indexed without a valid course context.  The
+ * script redirects to the site home rather than throwing a DB exception.
  *
  * @package    block_catquiz_statistics
  * @copyright  2025 Ralf Erlebach
@@ -40,11 +45,18 @@ use block_catquiz_statistics\report\attempt_results_report;
 use block_catquiz_statistics\repository\attempt_filter;
 use block_catquiz_statistics\repository\attempt_repository;
 
-$courseid   = required_param('courseid', PARAM_INT);
-$instanceid = optional_param('instanceid', 0, PARAM_INT) ?: null;
-$startdate  = optional_param('startdate', '', PARAM_ALPHANUMEXT);
-$enddate    = optional_param('enddate', '', PARAM_ALPHANUMEXT);
-$export     = optional_param('export', '', PARAM_ALPHA);
+$courseid    = required_param('courseid', PARAM_INT);
+$instanceid  = optional_param('instanceid', 0, PARAM_INT) ?: null;
+$instanceids = optional_param_array('instanceids', [], PARAM_INT);
+$startdate   = optional_param('startdate', '', PARAM_ALPHANUMEXT);
+$enddate     = optional_param('enddate', '', PARAM_ALPHANUMEXT);
+$export      = optional_param('export', '', PARAM_ALPHA);
+
+// Guard: courseid=0 arrives from theme pagination links when no course context
+// is set. Redirect gracefully instead of crashing with a DB exception.
+if ($courseid < 1) {
+    redirect(new moodle_url('/'));
+}
 
 $course  = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
 $context = context_course::instance($courseid);
@@ -60,7 +72,8 @@ $filter = new attempt_filter(
     courseid: $courseid,
     instanceid: $instanceid,
     starttime: $starttime,
-    endtime: $endtime
+    endtime: $endtime,
+    instanceids: $instanceids
 );
 
 $repo    = new attempt_repository();
@@ -69,7 +82,8 @@ $report  = new attempt_results_report($repo);
 // Handle export before any HTML output.
 if ($export !== '') {
     require_capability('block/catquiz_statistics:export', $context);
-    $mode = ($export === 'excel') ? 'multi' : 'wide';
+    // Multi-sheet (8 sheets) for spreadsheet formats; single sheet for csv/json.
+    $mode = in_array($export, ['excel', 'ods'], true) ? 'multi' : 'wide';
     (new attempt_results_exporter())->export($report, $filter, $export, $mode);
     exit;
 }
