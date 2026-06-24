@@ -64,4 +64,19 @@ class exporter_factory {
                 );
         }
     }
+    /**
+     * Return the correct exporter instance for the given module ID.
+     *
+     * Modul B (usage) uses test_usage_exporter for multi-sheet output.
+     * All other modules fall back to attempt_results_exporter.
+     *
+     * @param string $moduleid Active module ID.
+     * @return \block_catquiz_statistics\export\base_exporter
+     */
+    public static function create_exporter(string $moduleid): \block_catquiz_statistics\export\base_exporter {
+        if ($moduleid === 'usage') {
+            return new \block_catquiz_statistics\export\test_usage_exporter();
+        }
+        return new \block_catquiz_statistics\export\attempt_results_exporter();
+    }
 }

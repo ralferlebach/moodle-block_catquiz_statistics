@@ -246,7 +246,7 @@ class attempt_results_report implements report_interface {
         if (empty($this->allscalemeta)) {
             return $rawstats;
         }
-        // Build children map: parent_id => [child_id, ...]
+        // Build children map: parent_id => [child_id, ...].
         $children = [];
         foreach ($this->allscalemeta as $sid => $meta) {
             $pid = (int) ($meta['parentid'] ?? 0);
@@ -735,18 +735,7 @@ class attempt_results_report implements report_interface {
      * @return string
      */
     private function strategy_label(?int $strategy): string {
-        $map = [
-            1 => 'Alle Subskalen ableiten',
-            2 => 'Niedrigste Subskala',
-            3 => 'Höchste Subskala',
-            4 => 'Zufällige Subskala',
-            5 => 'Pilot-Item',
-            6 => 'Pilot',
-        ];
-        if ($strategy === null) {
-            return '';
-        }
-        return $map[$strategy] ?? ('Strategie ' . $strategy);
+        return statistics_helper::strategy_label($strategy);
     }
 
     /**
@@ -758,17 +747,7 @@ class attempt_results_report implements report_interface {
      * @return string
      */
     private function status_label(?int $status): string {
-        $map = [
-            0 => 'Abgeschlossen',
-            1 => 'In Bearbeitung',
-            2 => 'Abgebrochen',
-            3 => 'Timeout',
-            4 => 'In Bearbeitung',
-        ];
-        if ($status === null) {
-            return '';
-        }
-        return $map[$status] ?? ('Status ' . $status);
+        return statistics_helper::status_label($status);
     }
 
     /**
@@ -830,6 +809,15 @@ class attempt_results_report implements report_interface {
         return $value;
     }
 
+    /**
+     * Convert one attempt_data DTO to the fixed column array.
+     *
+     * Handles timestamp conversion, duration formatting, strategy/status labelling,
+     * and endtime fallback from graphicalsummary when the stored endtime is 0.
+     *
+     * @param attempt_data $dto Hydrated attempt DTO.
+     * @return array<string,mixed> Fixed column key-value pairs.
+     */
     private function dto_to_fixed_array(attempt_data $dto): array {
         // Endtime: if 0 and attempt is completed, fall back to last graphicalsummary timestamp.
         $endtime = ($dto->endtime && $dto->endtime > 0) ? $dto->endtime : null;
@@ -851,8 +839,9 @@ class attempt_results_report implements report_interface {
             'firstname' => $dto->firstname,
             'lastname' => $dto->lastname,
             'email' => $dto->email,
-            'starttime' => $this->unix_to_excel_date($dto->starttime),
-            'endtime' => $this->unix_to_excel_date($endtime),
+            'starttime' => $dto->starttime,
+            'endtime' => $endtime,
+            'duration_s' => $durationsecs,
             'duration_fmt' => $this->format_duration($durationsecs),
             'teststrategy' => $this->strategy_label($dto->teststrategy),
             'status' => $this->status_label($dto->status),
@@ -875,31 +864,31 @@ class attempt_results_report implements report_interface {
         $row = $this->dto_to_fixed_array($dto);
         $globalse = $globalscaleid !== null ? ($dto->se[$globalscaleid] ?? null) : null;
         $primaryse = $primaryid !== null ? ($dto->se[$primaryid] ?? null) : null;
+        $globalname = $globalscaleid !== null ? ($dto->catscales[$globalscaleid]->name ?? null) : null;
+        $globalability = $globalscaleid !== null ? ($dto->personabilities[$globalscaleid] ?? null) : null;
+        $primaryability = $primaryid !== null ? ($dto->personabilities[$primaryid] ?? null) : null;
 
         $row += [
             'global_scale_id' => $globalscaleid,
-            'global_scale_name' => $globalscaleid !== null
-                ? ($dto->catscales[$globalscaleid]->name ?? null) : null,
-            'global_score' => $this->guard_se($globalse,
-                $globalscaleid !== null ? ($dto->personabilities[$globalscaleid] ?? null) : null),
+            'global_scale_name' => $globalname,
+            'global_score' => $this->guard_se($globalse, $globalability),
             'global_se' => $globalse && $globalse >= 0 ? $globalse : null,
             'result_scale_id' => $primaryid,
             'result_scale_name' => $dto->primaryscale->name ?? null,
-            'result_score' => $this->guard_se($primaryse,
-                $primaryid !== null ? ($dto->personabilities[$primaryid] ?? null) : null),
+            'result_score' => $this->guard_se($primaryse, $primaryability),
             'result_se' => $primaryse && $primaryse >= 0 ? $primaryse : null,
         ];
 
         $nitems = se_validator::count_items_per_scale($dto->graphicalsummary);
         foreach ($scaleids as $scaleid) {
             $scalese = $dto->se[$scaleid] ?? null;
-            $row['scale_' . $scaleid . '_score'] = $this->guard_se(
-                $scalese, $dto->personabilities[$scaleid] ?? null
-            );
+            $scaleability = $dto->personabilities[$scaleid] ?? null;
+            $row['scale_' . $scaleid . '_score'] = $this->guard_se($scalese, $scaleability);
             $row['scale_' . $scaleid . '_se'] = ($scalese !== null && $scalese >= 0) ? $scalese : null;
             $row['scale_' . $scaleid . '_n'] = $this->guard_se($scalese, $nitems[$scaleid] ?? null);
             $row['scale_' . $scaleid . '_frac'] = $this->guard_se(
-                $scalese, $this->scale_frac($dto->graphicalsummary, $scaleid)
+                $scalese,
+                $this->scale_frac($dto->graphicalsummary, $scaleid)
             );
         }
 

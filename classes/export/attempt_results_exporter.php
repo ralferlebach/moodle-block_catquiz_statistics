@@ -226,11 +226,19 @@ class attempt_results_exporter extends base_exporter {
         }
         $writer->addRow(Row::fromValues(array_values($cols), $headerstyle));
         $colkeys = array_keys($cols);
+        // Columns that hold Unix timestamps and must be converted to Excel serial dates.
+        $timestampcols = ['starttime', 'endtime'];
         foreach ($rows as $row) {
             $vals = [];
             foreach ($colkeys as $key) {
                 $v = $row[$key] ?? null;
-                $vals[] = is_float($v) ? round($v, 3) : $v;
+                if ($v !== null && in_array($key, $timestampcols, true) && is_numeric($v) && $v > 0) {
+                    // Convert Unix timestamp to Excel serial date (days since 1900-01-00).
+                    $v = ($v / 86400.0) + 25569.0;
+                } else if (is_float($v)) {
+                    $v = round($v, 4);
+                }
+                $vals[] = $v;
             }
             $writer->addRow(Row::fromValues($vals));
         }

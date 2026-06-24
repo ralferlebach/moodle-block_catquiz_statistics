@@ -128,11 +128,11 @@ final class attempt_results_report_test extends \advanced_testcase {
         $row    = $this->report->get_flat_rows($filter)[0];
 
         $required = [
-            'id', 'userid', 'username', 'firstname', 'lastname', 'email',
+            'userid', 'username', 'firstname', 'lastname', 'email',
             'testid', 'attemptid', 'starttime', 'endtime', 'duration_s',
             'teststrategy', 'status', 'total_testitems', 'used_testitems',
-            'global_scale_id', 'global_scale_name', 'global_pp', 'global_se',
-            'primary_scale_id', 'primary_scale_name', 'primary_pp', 'primary_se',
+            'global_scale_id', 'global_scale_name', 'global_score', 'global_se',
+            'result_scale_id', 'result_scale_name', 'result_score', 'result_se',
         ];
         foreach ($required as $key) {
             $this->assertArrayHasKey($key, $row);
@@ -172,9 +172,9 @@ final class attempt_results_report_test extends \advanced_testcase {
         $this->report->get_flat_rows($filter);
         $columns = $this->report->get_columns();
 
-        $this->assertArrayHasKey('scale_1_pp', $columns);
+        $this->assertArrayHasKey('scale_1_score', $columns);
         $this->assertArrayHasKey('scale_1_se', $columns);
-        $this->assertArrayHasKey('scale_2_pp', $columns);
+        $this->assertArrayHasKey('scale_2_score', $columns);
         $this->assertArrayHasKey('scale_2_n', $columns);
     }
 

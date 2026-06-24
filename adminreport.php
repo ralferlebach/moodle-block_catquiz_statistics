@@ -37,7 +37,6 @@
 
 require_once('../../config.php');
 
-use block_catquiz_statistics\export\attempt_results_exporter;
 use block_catquiz_statistics\export\exporter_factory;
 use block_catquiz_statistics\output\report_page;
 use block_catquiz_statistics\repository\attempt_filter;
@@ -68,7 +67,7 @@ $report = exporter_factory::create_report($moduleid, $repo);
 // Handle export before any HTML output.
 if ($export !== '') {
     $mode = in_array($export, ['excel', 'ods'], true) ? 'multi' : 'wide';
-    (new attempt_results_exporter())->export($report, $filter, $export, $mode);
+    exporter_factory::create_exporter($moduleid)->export($report, $filter, $export, $mode);
     exit;
 }
 

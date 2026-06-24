@@ -94,16 +94,7 @@ class test_usage_report implements report_interface {
             return [];
         }
 
-        // Sort: userid ASC, globalscaleid ASC, starttime ASC.
-        usort($dtos, static function (attempt_data $a, attempt_data $b): int {
-            if ($a->userid !== $b->userid) {
-                return $a->userid <=> $b->userid;
-            }
-            if (($a->globalscaleid ?? 0) !== ($b->globalscaleid ?? 0)) {
-                return ($a->globalscaleid ?? 0) <=> ($b->globalscaleid ?? 0);
-            }
-            return ($a->starttime ?? 0) <=> ($b->starttime ?? 0);
-        });
+        $this->sort_dtos($dtos);
 
         // Group by user × globalscale for rank assignment.
         $groups = $this->group_by_user_globalscale($dtos);
@@ -162,7 +153,7 @@ class test_usage_report implements report_interface {
             'status'          => get_string('report:col_status', $c),
             'used_testitems'  => get_string('report:col_used_testitems', $c),
             'global_scale_id' => get_string('report:col_global_scale_id', $c),
-            'global_pp'       => get_string('report:col_global_pp', $c),
+            'global_score'    => get_string('report:col_global_score', $c),
             'global_se'       => get_string('report:col_global_se', $c),
             'delta_ability'   => get_string('report:col_delta_ability', $c),
             'rci'             => get_string('report:col_rci', $c),
@@ -193,16 +184,7 @@ class test_usage_report implements report_interface {
             return [];
         }
 
-        // Sort by userid ASC, then globalscaleid ASC, then starttime ASC.
-        usort($dtos, static function (attempt_data $a, attempt_data $b): int {
-            if ($a->userid !== $b->userid) {
-                return $a->userid <=> $b->userid;
-            }
-            if (($a->globalscaleid ?? 0) !== ($b->globalscaleid ?? 0)) {
-                return ($a->globalscaleid ?? 0) <=> ($b->globalscaleid ?? 0);
-            }
-            return ($a->starttime ?? 0) <=> ($b->starttime ?? 0);
-        });
+        $this->sort_dtos($dtos);
 
         // Group by user × globalscaleid.
         $groups = [];
@@ -269,6 +251,25 @@ class test_usage_report implements report_interface {
      * @param attempt_data[] $dtos Sorted DTOs.
      * @return array[] Array of groups; each group is an array of attempt_data.
      */
+
+    /**
+     * Sort DTOs by userid ASC, globalscaleid ASC, starttime ASC.
+     *
+     * @param attempt_data[] $dtos DTOs to sort in-place.
+     * @return void
+     */
+    private function sort_dtos(array &$dtos): void {
+        usort($dtos, static function (attempt_data $a, attempt_data $b): int {
+            if ($a->userid !== $b->userid) {
+                return $a->userid <=> $b->userid;
+            }
+            if (($a->globalscaleid ?? 0) !== ($b->globalscaleid ?? 0)) {
+                return ($a->globalscaleid ?? 0) <=> ($b->globalscaleid ?? 0);
+            }
+            return ($a->starttime ?? 0) <=> ($b->starttime ?? 0);
+        });
+    }
+
     /**
      * Group DTOs by user ID × global scale ID.
      *
@@ -338,26 +339,40 @@ class test_usage_report implements report_interface {
                 }
             }
 
+            $globalscalename = $globalscaleid !== null
+                ? ($dto->catscales[$globalscaleid]->name ?? null) : null;
+            $primaryid   = $dto->primaryscale->id ?? null;
+            $primaryname = $dto->primaryscale->name ?? null;
+            $primarypp   = $primaryid !== null ? ($dto->personabilities[$primaryid] ?? null) : null;
+            $primaryse   = $primaryid !== null ? ($dto->se[$primaryid] ?? null) : null;
+            $endtime = ($dto->endtime && $dto->endtime > 0) ? $dto->endtime : null;
+
             $rows[] = [
-                'userid'          => $dto->userid,
-                'username'        => $dto->username,
-                'firstname'       => $dto->firstname,
-                'lastname'        => $dto->lastname,
-                'email'           => $dto->email,
-                'instanceid'      => $dto->instanceid,
-                'testname'        => $dto->catscales[$globalscaleid]->name ?? null,
-                'attemptid'       => $dto->attemptid,
-                'attempt_rank'    => $rank,
-                'starttime'       => $dto->starttime,
-                'endtime'         => $dto->endtime,
-                'duration_s'      => $dto->durationseconds,
-                'status'          => $dto->status,
-                'used_testitems'  => $dto->usedtestitems,
-                'global_scale_id' => $globalscaleid,
-                'global_pp'       => $pp,
-                'global_se'       => $se,
-                'delta_ability'   => $delta,
-                'rci'             => $rci,
+                'userid'            => $dto->userid,
+                'global_scale_id'   => $globalscaleid,
+                'username'          => $dto->username,
+                'firstname'         => $dto->firstname,
+                'lastname'          => $dto->lastname,
+                'email'             => $dto->email,
+                'testid'            => $dto->testid,
+                'attemptid'         => $dto->attemptid,
+                'attempt_rank'      => $rank,
+                'starttime'         => $dto->starttime,
+                'endtime'           => $endtime,
+                'duration_s'        => $dto->durationseconds,
+                'teststrategy'      => statistics_helper::strategy_label($dto->teststrategy),
+                'status'            => statistics_helper::status_label($dto->status),
+                'total_testitems'   => $dto->totaltestitems,
+                'used_testitems'    => $dto->usedtestitems,
+                'globalscale_name'  => $globalscalename,
+                'global_score'      => $pp,
+                'global_se'         => $se,
+                'result_scale_id'   => $primaryid,
+                'result_scale_name' => $primaryname,
+                'result_score'      => $primarypp,
+                'result_se'         => $primaryse,
+                'delta_ability'     => $delta,
+                'rci'               => $rci,
             ];
 
             $prev = $dto;

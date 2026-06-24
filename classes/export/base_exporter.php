@@ -26,6 +26,8 @@ namespace block_catquiz_statistics\export;
 
 use block_catquiz_statistics\report\report_interface;
 use block_catquiz_statistics\repository\attempt_filter;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Style\Style;
 
 /**
  * Base exporter - wraps Moodle's \core\dataformat API.
@@ -150,5 +152,112 @@ abstract class base_exporter {
             $parts[] = 'instance' . $filter->instanceid;
         }
         return clean_filename(implode('_', $parts));
+    }
+    /**
+     * Write one standard data sheet.
+     *
+     * Timestamp columns (starttime, endtime) are converted from Unix timestamps
+     * to Excel serial dates during write. Floats are rounded to 4 decimal places.
+     *
+     * @param object $writer OpenSpout writer instance.
+     * @param int $sheetnum Current sheet index (incremented by reference).
+     * @param string $title Sheet tab name.
+     * @param array $cols Column key => header label map.
+     * @param array $rows Data rows (associative, keyed by column key).
+     * @param Style $headerstyle Style applied to the header row.
+     * @param array|null $groupheader Optional group-header row written above column headers.
+     * @return void
+     */
+    protected function write_sheet(
+        object $writer,
+        int &$sheetnum,
+        string $title,
+        array $cols,
+        array $rows,
+        Style $headerstyle,
+        ?array $groupheader = null
+    ): void {
+        $this->activate_sheet($writer, $sheetnum, $title);
+        if ($groupheader !== null) {
+            $writer->addRow(Row::fromValues($groupheader, $headerstyle));
+        }
+        $writer->addRow(Row::fromValues(array_values($cols), $headerstyle));
+        $colkeys = array_keys($cols);
+        // Columns that hold Unix timestamps to be converted to Excel serial dates.
+        $timestampcols = ['starttime', 'endtime'];
+        foreach ($rows as $row) {
+            $vals = [];
+            foreach ($colkeys as $key) {
+                $v = $row[$key] ?? null;
+                if (in_array($key, $timestampcols, true) && (empty($v) || $v == 0)) {
+                    // Suppress zero/null timestamps (endtime=0 means not completed).
+                    $v = null;
+                } else if ($v !== null && in_array($key, $timestampcols, true) && is_numeric($v) && $v > 0) {
+                    // Convert Unix timestamp to Excel serial date (days since 1900-01-00).
+                    $v = ($v / 86400.0) + 25569.0;
+                } else if (is_float($v)) {
+                    $v = round($v, 4);
+                }
+                $vals[] = $v;
+            }
+            $writer->addRow(Row::fromValues($vals));
+        }
+        $sheetnum++;
+    }
+
+    /**
+     * Write the metadata sheet with section-header row formatting.
+     *
+     * Rows whose 'section' field is non-empty receive $sectionstyle (dark background);
+     * all other rows use the default style (white background).
+     *
+     * @param object $writer OpenSpout writer instance.
+     * @param int $sheetnum Current sheet index (incremented by reference).
+     * @param string $title Sheet tab name.
+     * @param array $cols Column key => header label map.
+     * @param array $rows Metadata rows; each row may have a 'section' key.
+     * @param Style $headerstyle Style for the column header row.
+     * @param Style $sectionstyle Style for section-header rows.
+     * @return void
+     */
+    protected function write_meta_sheet(
+        object $writer,
+        int &$sheetnum,
+        string $title,
+        array $cols,
+        array $rows,
+        Style $headerstyle,
+        Style $sectionstyle
+    ): void {
+        $this->activate_sheet($writer, $sheetnum, $title);
+        $writer->addRow(Row::fromValues(array_values($cols), $headerstyle));
+        $colkeys = array_keys($cols);
+        foreach ($rows as $row) {
+            $style = (!empty($row['section'])) ? $sectionstyle : null;
+            $vals = [];
+            foreach ($colkeys as $key) {
+                $vals[] = $row[$key] ?? null;
+            }
+            $writer->addRow(Row::fromValues($vals, $style));
+        }
+        $sheetnum++;
+    }
+
+    /**
+     * Activate the correct sheet: rename the first (auto-created) sheet, or
+     * add a new sheet for all subsequent ones.
+     *
+     * @param object $writer OpenSpout writer instance.
+     * @param int $sheetnum 0 = rename first sheet; > 0 = add new sheet.
+     * @param string $title Sheet tab name.
+     * @return void
+     */
+    protected function activate_sheet(object $writer, int $sheetnum, string $title): void {
+        if ($sheetnum === 0) {
+            $writer->getCurrentSheet()->setName($title);
+        } else {
+            $writer->addNewSheetAndMakeItCurrent();
+            $writer->getCurrentSheet()->setName($title);
+        }
     }
 }

@@ -111,4 +111,50 @@ class statistics_helper {
         }
         return (float) $sorted[$low] + $frac * ((float) $sorted[$low + 1] - (float) $sorted[$low]);
     }
+
+    /**
+     * Convert a teststrategy integer to a human-readable German label.
+     *
+     * Values 1–6 are defined in local_catquiz (Blueprint §1.1).
+     * Values above 6 are extended Wunderbyte strategies; shown as "Strategie N".
+     *
+     * @param int|null $strategy Strategy constant.
+     * @return string
+     */
+    public static function strategy_label(?int $strategy): string {
+        $map = [
+            1 => 'Alle Subskalen ableiten',
+            2 => 'Niedrigste Subskala',
+            3 => 'Höchste Subskala',
+            4 => 'Zufällige Subskala',
+            5 => 'Pilot-Item',
+            6 => 'Pilot',
+        ];
+        if ($strategy === null) {
+            return '';
+        }
+        return $map[$strategy] ?? ('Strategie ' . $strategy);
+    }
+
+    /**
+     * Convert an attempt status integer to a human-readable German label.
+     *
+     * 0 = completed (adaptivequiz default); other values = in progress or abandoned.
+     *
+     * @param int|null $status Status constant.
+     * @return string
+     */
+    public static function status_label(?int $status): string {
+        $map = [
+            0 => 'Abgeschlossen',
+            1 => 'In Bearbeitung',
+            2 => 'Abgebrochen',
+            3 => 'Timeout',
+            4 => 'In Bearbeitung',
+        ];
+        if ($status === null) {
+            return '';
+        }
+        return $map[$status] ?? ('Status ' . $status);
+    }
 }

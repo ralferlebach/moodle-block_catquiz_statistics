@@ -197,20 +197,22 @@ class report_page implements renderable, templatable {
         // Build export format options. Default selection comes from the admin setting.
         $defaultformat = get_config('block_catquiz_statistics', 'defaultformat') ?: 'csv';
         // Sheet counts per module for multi-sheet formats.
+        // For usage: 1 Metadaten + 1 Testnutzung(gesamt) + N Skala-Sheets + 1 Rohdaten = 3 + N.
+        $usagescalecount = count(array_unique(array_filter(
+            array_column($this->summaryrows, 'global_scale_id')
+        )));
         $sheetcounts = [
-            'results' => 8,
-            'usage'   => 1,
-            'progress'=> 1,
-            'activity'=> 0,
-            'items'   => 1,
+            'results'  => 8,
+            'usage'    => 3 + $usagescalecount,
+            'progress' => 1,
+            'activity' => 0,
+            'items'    => 1,
         ];
         $sheets = $sheetcounts[$this->moduleid] ?? 1;
-        $xlsxlabel = $sheets > 1
-            ? get_string('report:format_excel', $plugin)
-            : 'Excel (XLSX, ' . $sheets . ' ' . get_string('report:sheet', $plugin) . ')';
-        $odslabel = $sheets > 1
-            ? get_string('report:format_ods', $plugin)
-            : 'ODS (' . $sheets . ' ' . get_string('report:sheet', $plugin) . ')';
+        $xlsxlabel = 'Excel (XLSX, ' . $sheets . ' '
+            . get_string('report:sheet', $plugin) . ($sheets !== 1 ? 'er' : '') . ')';
+        $odslabel = 'ODS (' . $sheets . ' '
+            . get_string('report:sheet', $plugin) . ($sheets !== 1 ? 'er' : '') . ')';
 
         $formatlabels = [
             'csv'   => get_string('report:format_csv', $plugin),
@@ -288,8 +290,10 @@ class report_page implements renderable, templatable {
                     get_string('report:col_global_scale_name', $plugin),
                     get_string('report:col_n_attempts', $plugin),
                     get_string('report:col_best_score', $plugin),
-                    get_string('report:col_delta_ability', $plugin),
-                    get_string('report:col_rci', $plugin),
+                    get_string('report:col_first_score', $plugin),
+                    get_string('report:col_last_score', $plugin),
+                    get_string('report:col_score_trend', $plugin),
+                    get_string('report:col_rci_start_end', $plugin),
                 ];
             case 'progress':
                 return [
@@ -325,7 +329,7 @@ class report_page implements renderable, templatable {
                     get_string('report:col_used_testitems', $plugin),
                     get_string('report:col_status', $plugin),
                     get_string('report:col_global_scale_name', $plugin),
-                    get_string('report:col_global_pp', $plugin),
+                    get_string('report:col_global_score', $plugin),
                     get_string('report:col_global_se', $plugin),
                 ];
         }
@@ -360,25 +364,25 @@ class report_page implements renderable, templatable {
      * @return array[]
      */
     private function cells_usage(array $row): array {
-        $name = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? ''));
-        if ($name === '') {
-            $name = $row['username'] ?? '?';
+        // Suppress name for subsequent rows of the same user (simulated cell merge).
+        $name = '';
+        if (!empty($row['is_first_for_user'])) {
+            $n = trim(($row['firstname'] ?? '') . ' ' . ($row['lastname'] ?? ''));
+            $name = $n !== '' ? $n : ($row['username'] ?? '?');
         }
-        $starttime = !empty($row['starttime'])
-            ? userdate($row['starttime'], get_string('strftimerecentfull', 'langconfig')) : '-';
-        $pp    = $row['global_pp'] !== null ? number_format((float) $row['global_pp'], 3) : '-';
-        $se    = $row['global_se'] !== null ? number_format((float) $row['global_se'], 3) : '-';
-        $delta = $row['delta_ability'] !== null ? number_format((float) $row['delta_ability'], 3) : '-';
-        $rci   = $row['rci'] !== null ? number_format((float) $row['rci'], 2) : '-';
+        $best  = $row['best_score'] !== null ? number_format((float) $row['best_score'], 3) : '-';
+        $first = $row['first_score'] !== null ? number_format((float) $row['first_score'], 3) : '-';
+        $last  = $row['last_score'] !== null ? number_format((float) $row['last_score'], 3) : '-';
+        $rci   = $row['rci_start_end'] !== null ? number_format((float) $row['rci_start_end'], 2) : '-';
+        $trend = $row['score_trend'] !== null ? number_format((float) $row['score_trend'], 3) : '-';
         return [
             ['v' => $name],
-            ['v' => $row['testname'] ?? '-'],
-            ['v' => $row['attempt_rank'] ?? '-'],
-            ['v' => $starttime],
-            ['v' => $row['status'] ?? '-'],
-            ['v' => $pp],
-            ['v' => $se],
-            ['v' => $delta],
+            ['v' => $row['global_scale_name'] ?? '-'],
+            ['v' => $row['n_attempts'] ?? '-'],
+            ['v' => $best],
+            ['v' => $first],
+            ['v' => $last],
+            ['v' => $trend],
             ['v' => $rci],
         ];
     }
@@ -456,8 +460,8 @@ class report_page implements renderable, templatable {
             $rem  = $secs % 60;
             $duration = $mins > 0 ? $mins . ' min ' . $rem . ' s' : $rem . ' s';
         }
-        $globalpp = isset($row['global_pp']) && $row['global_pp'] !== null
-            ? number_format((float) $row['global_pp'], 2) : '-';
+        $globalscore = isset($row['global_score']) && $row['global_score'] !== null
+            ? number_format((float) $row['global_score'], 2) : '-';
         $globalse = $row['global_se'] !== null
             ? number_format((float) $row['global_se'], 2) : 'n/v';
         return [
@@ -467,7 +471,7 @@ class report_page implements renderable, templatable {
             ['v' => $row['used_testitems'] ?? '-'],
             ['v' => $row['status'] ?? '-'],
             ['v' => $row['global_scale_name'] ?? '-'],
-            ['v' => $globalpp],
+            ['v' => $globalscore],
             ['v' => $globalse],
         ];
     }
