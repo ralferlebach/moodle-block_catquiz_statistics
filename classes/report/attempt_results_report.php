@@ -181,7 +181,8 @@ class attempt_results_report implements report_interface {
             return [];
         }
         $allstats = $this->compute_pp_stats($dtos);
-        $itemstats = $this->repository->get_item_stats_by_scale($this->activescaleids);
+        $rawitemstats = $this->repository->get_item_stats_by_scale($this->activescaleids);
+        $itemstats = $this->aggregate_item_stats_to_parents($rawitemstats);
 
         $rows = [];
         foreach ($this->activescaleids as $scaleid) {
@@ -229,6 +230,69 @@ class attempt_results_report implements report_interface {
         return $rows;
     }
 
+
+    /**
+     * Aggregate item statistics upward through the scale hierarchy.
+     *
+     * leaf scale items are direct DB counts. Parent scales receive the SUM
+     * of all their direct and indirect child scale totals/productives.
+     * Difficulty stats for parent scales are computed from the union of
+     * child difficulty values.
+     *
+     * @param array $rawstats Raw stats from get_item_stats_by_scale (scale_id => stats).
+     * @return array Same structure as input with parent scales filled in.
+     */
+    private function aggregate_item_stats_to_parents(array $rawstats): array {
+        if (empty($this->allscalemeta)) {
+            return $rawstats;
+        }
+        // Build children map: parent_id => [child_id, ...]
+        $children = [];
+        foreach ($this->allscalemeta as $sid => $meta) {
+            $pid = (int) ($meta['parentid'] ?? 0);
+            if ($pid > 0) {
+                $children[$pid][] = $sid;
+            }
+        }
+
+        // Recursive sum via depth-first traversal.
+        $result = $rawstats;
+        $visited = [];
+
+        $recurse = function (int $sid) use (&$recurse, &$result, $children, &$visited): array {
+            if (isset($visited[$sid])) {
+                return $result[$sid] ?? ['total' => 0, 'productive' => 0,
+                    'diff_min' => null, 'diff_max' => null,
+                    'diff_mean' => null, 'diff_sd' => null];
+            }
+            $visited[$sid] = true;
+            if (empty($children[$sid])) {
+                // Leaf — return as-is.
+                return $result[$sid] ?? ['total' => 0, 'productive' => 0,
+                    'diff_min' => null, 'diff_max' => null,
+                    'diff_mean' => null, 'diff_sd' => null];
+            }
+            // Parent — aggregate children.
+            $total = $result[$sid]['total'] ?? 0;
+            $productive = $result[$sid]['productive'] ?? 0;
+            foreach ($children[$sid] as $cid) {
+                $child = $recurse($cid);
+                $total += (int) ($child['total'] ?? 0);
+                $productive += (int) ($child['productive'] ?? 0);
+            }
+            $result[$sid] = array_merge($result[$sid] ?? [], [
+                'total' => $total,
+                'productive' => $productive,
+            ]);
+            return $result[$sid];
+        };
+
+        foreach (array_keys($rawstats) as $sid) {
+            $recurse($sid);
+        }
+        return $result;
+    }
+
     /**
      * Return subscale pivot rows for one metric across all attempts.
      *
@@ -254,7 +318,7 @@ class attempt_results_report implements report_interface {
             ];
             foreach ($this->activescaleids as $scaleid) {
                 switch ($metric) {
-                    case 'pp':
+                    case 'score':
                         $row['scale_' . $scaleid] = $dto->personabilities[$scaleid] ?? null;
                         break;
                     case 'se':
@@ -302,15 +366,15 @@ class attempt_results_report implements report_interface {
         // Global and primary scale columns (between fixed and subscale columns).
         $cols['global_scale_id'] = get_string('report:col_global_scale_id', $c);
         $cols['global_scale_name'] = get_string('report:col_global_scale_name', $c);
-        $cols['global_pp'] = get_string('report:col_global_pp', $c);
+        $cols['global_score'] = get_string('report:col_global_score', $c);
         $cols['global_se'] = get_string('report:col_global_se', $c);
-        $cols['primary_scale_id'] = get_string('report:col_primary_scale_id', $c);
-        $cols['primary_scale_name'] = get_string('report:col_primary_scale_name', $c);
-        $cols['primary_pp'] = get_string('report:col_primary_pp', $c);
-        $cols['primary_se'] = get_string('report:col_primary_se', $c);
+        $cols['result_scale_id'] = get_string('report:col_result_scale_id', $c);
+        $cols['result_scale_name'] = get_string('report:col_result_scale_name', $c);
+        $cols['result_score'] = get_string('report:col_result_score', $c);
+        $cols['result_se'] = get_string('report:col_result_se', $c);
         foreach ($this->activescaleids as $scaleid) {
             $slabel = $this->activescalelabels[$scaleid] ?? ('Scale ' . $scaleid);
-            $cols['scale_' . $scaleid . '_pp'] = $slabel . ' PP';
+            $cols['scale_' . $scaleid . '_score'] = $slabel . ' PP';
             $cols['scale_' . $scaleid . '_se'] = $slabel . ' SE';
             $cols['scale_' . $scaleid . '_n'] = $slabel . ' N';
             $cols['scale_' . $scaleid . '_frac'] = $slabel . ' %';
@@ -326,17 +390,16 @@ class attempt_results_report implements report_interface {
     public function get_fixed_columns(): array {
         $c = 'block_catquiz_statistics';
         return [
-            'id' => get_string('report:col_id', $c),
+            'attemptid' => get_string('report:col_attemptid', $c),
+            'testid' => get_string('report:col_testid', $c),
             'userid' => get_string('report:col_userid', $c),
             'username' => get_string('report:col_username', $c),
             'firstname' => get_string('report:col_firstname', $c),
             'lastname' => get_string('report:col_lastname', $c),
             'email' => get_string('report:col_email', $c),
-            'testid' => get_string('report:col_testid', $c),
-            'attemptid' => get_string('report:col_attemptid', $c),
             'starttime' => get_string('report:col_starttime', $c),
             'endtime' => get_string('report:col_endtime', $c),
-            'duration_s' => get_string('report:col_duration_s', $c),
+            'duration_fmt' => get_string('report:col_duration_fmt', $c),
             'teststrategy' => get_string('report:col_teststrategy', $c),
             'status' => get_string('report:col_status', $c),
             'total_testitems' => get_string('report:col_total_testitems', $c),
@@ -661,21 +724,138 @@ class attempt_results_report implements report_interface {
      * @param attempt_data $dto Hydrated attempt DTO.
      * @return array<string,mixed> Fixed column key-value pairs.
      */
+
+    /**
+     * Convert a teststrategy integer to a human-readable German label.
+     *
+     * Values 1–6 are defined in local_catquiz (Blueprint §1.1).
+     * Values above 6 are extended Wunderbyte strategies; shown as "Strategie N".
+     *
+     * @param int|null $strategy Strategy constant.
+     * @return string
+     */
+    private function strategy_label(?int $strategy): string {
+        $map = [
+            1 => 'Alle Subskalen ableiten',
+            2 => 'Niedrigste Subskala',
+            3 => 'Höchste Subskala',
+            4 => 'Zufällige Subskala',
+            5 => 'Pilot-Item',
+            6 => 'Pilot',
+        ];
+        if ($strategy === null) {
+            return '';
+        }
+        return $map[$strategy] ?? ('Strategie ' . $strategy);
+    }
+
+    /**
+     * Convert an attempt status integer to a human-readable German label.
+     *
+     * 0 = completed (adaptivequiz default); other values = in progress/abandoned.
+     *
+     * @param int|null $status Status constant.
+     * @return string
+     */
+    private function status_label(?int $status): string {
+        $map = [
+            0 => 'Abgeschlossen',
+            1 => 'In Bearbeitung',
+            2 => 'Abgebrochen',
+            3 => 'Timeout',
+            4 => 'In Bearbeitung',
+        ];
+        if ($status === null) {
+            return '';
+        }
+        return $map[$status] ?? ('Status ' . $status);
+    }
+
+    /**
+     * Convert a Unix timestamp to an Excel serial date (days since 1900-01-01).
+     *
+     * Excel's date system uses 1900-01-00 as epoch (with the 1900 leap-year bug).
+     * This matches what Excel and LibreOffice expect for numeric date cells.
+     * Returns null for zero/null timestamps (meaning "not set").
+     *
+     * @param int|null $timestamp Unix timestamp.
+     * @return float|null Excel serial date, or null if not set.
+     */
+    private function unix_to_excel_date(?int $timestamp): ?float {
+        if (!$timestamp) {
+            return null;
+        }
+        // Excel epoch: 1899-12-30 (accounts for the 1900 leap-year bug).
+        return ($timestamp / 86400.0) + 25569.0;
+    }
+
+    /**
+     * Format a duration in seconds as "Xh Ymin Zs" or "Xmin Zs" or "Zs".
+     * Returns null for zero or null durations.
+     *
+     * @param int|null $seconds Duration in seconds.
+     * @return string|null
+     */
+    private function format_duration(?int $seconds): ?string {
+        if (!$seconds) {
+            return null;
+        }
+        $h = (int) ($seconds / 3600);
+        $m = (int) (($seconds % 3600) / 60);
+        $s = $seconds % 60;
+        if ($h > 0) {
+            return $h . 'h ' . $m . 'min ' . $s . 's';
+        }
+        if ($m > 0) {
+            return $m . 'min ' . $s . 's';
+        }
+        return $s . 's';
+    }
+
+    /**
+     * Suppress scale values when SE = -1 (no computed value for this scale).
+     *
+     * SE = -1 is catquiz's sentinel meaning the scale was presented but not
+     * yet computed (e.g. the attempt is still in progress or the scale had
+     * too few items). In that case pp, se, n and frac are all meaningless.
+     *
+     * @param float|null $se SE value from the DTO.
+     * @param mixed $value The value to return if SE is valid.
+     * @return mixed|null Null when SE = -1, otherwise $value.
+     */
+    private function guard_se(?float $se, mixed $value): mixed {
+        if ($se !== null && $se < 0) {
+            return null;
+        }
+        return $value;
+    }
+
     private function dto_to_fixed_array(attempt_data $dto): array {
+        // Endtime: if 0 and attempt is completed, fall back to last graphicalsummary timestamp.
+        $endtime = ($dto->endtime && $dto->endtime > 0) ? $dto->endtime : null;
+        if ($endtime === null && !empty($dto->graphicalsummary)) {
+            // Use timestamp from debug_info if available; otherwise leave null.
+            $last = end($dto->graphicalsummary);
+            if ($last !== false && isset($last->timestamp) && $last->timestamp > 0) {
+                $endtime = (int) $last->timestamp;
+            }
+        }
+        $durationsecs = ($dto->durationseconds && $dto->durationseconds > 0)
+            ? (int) $dto->durationseconds : null;
+
         return [
-            'id' => $dto->id,
+            'attemptid' => $dto->attemptid,
+            'testid' => $dto->testid,
             'userid' => $dto->userid,
             'username' => $dto->username,
             'firstname' => $dto->firstname,
             'lastname' => $dto->lastname,
             'email' => $dto->email,
-            'testid' => $dto->testid,
-            'attemptid' => $dto->attemptid,
-            'starttime' => $dto->starttime,
-            'endtime' => $dto->endtime,
-            'duration_s' => $dto->durationseconds,
-            'teststrategy' => $dto->teststrategy,
-            'status' => $dto->status,
+            'starttime' => $this->unix_to_excel_date($dto->starttime),
+            'endtime' => $this->unix_to_excel_date($endtime),
+            'duration_fmt' => $this->format_duration($durationsecs),
+            'teststrategy' => $this->strategy_label($dto->teststrategy),
+            'status' => $this->status_label($dto->status),
             'total_testitems' => $dto->totaltestitems,
             'used_testitems' => $dto->usedtestitems,
         ];
@@ -693,28 +873,34 @@ class attempt_results_report implements report_interface {
         $primaryid = isset($dto->primaryscale->id) ? (int) $dto->primaryscale->id : null;
 
         $row = $this->dto_to_fixed_array($dto);
+        $globalse = $globalscaleid !== null ? ($dto->se[$globalscaleid] ?? null) : null;
+        $primaryse = $primaryid !== null ? ($dto->se[$primaryid] ?? null) : null;
+
         $row += [
             'global_scale_id' => $globalscaleid,
             'global_scale_name' => $globalscaleid !== null
                 ? ($dto->catscales[$globalscaleid]->name ?? null) : null,
-            'global_pp' => $globalscaleid !== null
-                ? ($dto->personabilities[$globalscaleid] ?? null) : null,
-            'global_se' => $globalscaleid !== null
-                ? ($dto->se[$globalscaleid] ?? null) : null,
-            'primary_scale_id' => $primaryid,
-            'primary_scale_name' => $dto->primaryscale->name ?? null,
-            'primary_pp' => $primaryid !== null
-                ? ($dto->personabilities[$primaryid] ?? null) : null,
-            'primary_se' => $primaryid !== null
-                ? ($dto->se[$primaryid] ?? null) : null,
+            'global_score' => $this->guard_se($globalse,
+                $globalscaleid !== null ? ($dto->personabilities[$globalscaleid] ?? null) : null),
+            'global_se' => $globalse && $globalse >= 0 ? $globalse : null,
+            'result_scale_id' => $primaryid,
+            'result_scale_name' => $dto->primaryscale->name ?? null,
+            'result_score' => $this->guard_se($primaryse,
+                $primaryid !== null ? ($dto->personabilities[$primaryid] ?? null) : null),
+            'result_se' => $primaryse && $primaryse >= 0 ? $primaryse : null,
         ];
 
         $nitems = se_validator::count_items_per_scale($dto->graphicalsummary);
         foreach ($scaleids as $scaleid) {
-            $row['scale_' . $scaleid . '_pp'] = $dto->personabilities[$scaleid] ?? null;
-            $row['scale_' . $scaleid . '_se'] = $dto->se[$scaleid] ?? null;
-            $row['scale_' . $scaleid . '_n'] = $nitems[$scaleid] ?? null;
-            $row['scale_' . $scaleid . '_frac'] = $this->scale_frac($dto->graphicalsummary, $scaleid);
+            $scalese = $dto->se[$scaleid] ?? null;
+            $row['scale_' . $scaleid . '_score'] = $this->guard_se(
+                $scalese, $dto->personabilities[$scaleid] ?? null
+            );
+            $row['scale_' . $scaleid . '_se'] = ($scalese !== null && $scalese >= 0) ? $scalese : null;
+            $row['scale_' . $scaleid . '_n'] = $this->guard_se($scalese, $nitems[$scaleid] ?? null);
+            $row['scale_' . $scaleid . '_frac'] = $this->guard_se(
+                $scalese, $this->scale_frac($dto->graphicalsummary, $scaleid)
+            );
         }
 
         return $row;

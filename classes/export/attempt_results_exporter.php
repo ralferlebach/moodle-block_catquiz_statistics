@@ -176,7 +176,7 @@ class attempt_results_exporter extends base_exporter {
 
         // Sheets 5-8: subscale pivots.
         $pivots = [
-            'pp' => get_string('report:sheet_subscale_scores', $plugin),
+            'score' => get_string('report:sheet_subscale_scores', $plugin),
             'se' => get_string('report:sheet_subscale_se', $plugin),
             'n' => get_string('report:sheet_subscale_n', $plugin),
             'frac' => get_string('report:sheet_subscale_frac', $plugin),
@@ -382,13 +382,16 @@ class attempt_results_exporter extends base_exporter {
 
         $meta = $report->get_metadata_for_export($filter, $format);
 
+        // Sheet overview: order matches the actual sheet tab sequence in the workbook.
         $sheets = [
+            get_string('report:sheet_metadata', $plugin)
+                => get_string('report:meta_sheet_metadata', $plugin),
             get_string('report:sheet_attempts_raw', $plugin)
                 => get_string('report:meta_sheet_attempts_raw', $plugin),
-            get_string('report:sheet_attempts_wide', $plugin)
-                => get_string('report:meta_sheet_attempts_wide', $plugin),
             get_string('report:sheet_scale_summary', $plugin)
                 => get_string('report:meta_sheet_scale_summary', $plugin),
+            get_string('report:sheet_attempts_wide', $plugin)
+                => get_string('report:meta_sheet_attempts_wide', $plugin),
             get_string('report:sheet_subscale_scores', $plugin)
                 => get_string('report:meta_sheet_subscale_scores', $plugin),
             get_string('report:sheet_subscale_se', $plugin)
@@ -472,6 +475,22 @@ class attempt_results_exporter extends base_exporter {
             $rows[] = ['section' => get_string('report:meta_s_sheets', $plugin), 'key' => $sheetname, 'value' => $desc];
         }
 
-        return [$cols, $rows];
+        // Post-process: split rows that have both a section AND a key into
+        // two rows: (1) a section-header row with empty key/value, then
+        // (2) a data row with empty section. This gives section headers
+        // a coloured background while key/value rows stay white.
+        $processed = [];
+        $lastsection = '';
+        foreach ($rows as $row) {
+            if (!empty($row['section']) && $row['section'] !== $lastsection) {
+                // Emit a pure section-header row.
+                $processed[] = ['section' => $row['section'], 'key' => '', 'value' => ''];
+                $lastsection = $row['section'];
+            }
+            if (!empty($row['key']) || !empty($row['value'])) {
+                $processed[] = ['section' => '', 'key' => $row['key'] ?? '', 'value' => $row['value']];
+            }
+        }
+        return [$cols, $processed];
     }
 }
