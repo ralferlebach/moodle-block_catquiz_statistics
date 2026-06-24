@@ -35,6 +35,7 @@ use block_catquiz_statistics\repository\attempt_repository;
  *
  * @covers \block_catquiz_statistics\export\exporter_factory
  * @covers \block_catquiz_statistics\export\base_exporter
+ * @covers \block_catquiz_statistics\export\test_usage_exporter
  */
 final class attempt_results_exporter_test extends \basic_testcase {
     /**
@@ -83,5 +84,50 @@ final class attempt_results_exporter_test extends \basic_testcase {
         $filter = new \block_catquiz_statistics\repository\attempt_filter(courseid: 999999);
         $result = $report->get_aggregate_stats($filter);
         $this->assertIsArray($result);
+    }
+
+    /**
+     * Factory creates every defined report module without error.
+     *
+     * @return void
+     */
+    public function test_factory_creates_all_modules(): void {
+        $repo = new attempt_repository();
+        foreach (['results', 'usage', 'progress', 'activity', 'items'] as $moduleid) {
+            $report = exporter_factory::create_report($moduleid, $repo);
+            $this->assertSame($moduleid, $report->get_module_id());
+        }
+    }
+
+    /**
+     * create_exporter returns the multi-sheet usage exporter for module 'usage'.
+     *
+     * @return void
+     */
+    public function test_create_exporter_routes_usage_to_usage_exporter(): void {
+        $exporter = exporter_factory::create_exporter('usage');
+        $this->assertInstanceOf(test_usage_exporter::class, $exporter);
+    }
+
+    /**
+     * create_exporter returns the default results exporter for non-usage modules.
+     *
+     * @return void
+     */
+    public function test_create_exporter_routes_others_to_results_exporter(): void {
+        foreach (['results', 'progress', 'items', 'activity'] as $moduleid) {
+            $exporter = exporter_factory::create_exporter($moduleid);
+            $this->assertInstanceOf(attempt_results_exporter::class, $exporter);
+        }
+    }
+
+    /**
+     * Both exporters share the base_exporter type.
+     *
+     * @return void
+     */
+    public function test_exporters_extend_base_exporter(): void {
+        $this->assertInstanceOf(base_exporter::class, exporter_factory::create_exporter('usage'));
+        $this->assertInstanceOf(base_exporter::class, exporter_factory::create_exporter('results'));
     }
 }

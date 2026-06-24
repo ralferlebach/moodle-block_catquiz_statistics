@@ -59,6 +59,55 @@ class block_catquiz_statistics_generator extends testing_block_generator {
     }
 
     /**
+     * Build a fully customisable attempts.json payload for testing.
+     *
+     * Unlike build_attempt_json() this allows multiple scales, an explicit
+     * primaryscale, an explicit testid and a graphicalsummary_data array, so
+     * that exporter and report tests can exercise SE=-1 suppression, the
+     * Ergebnisskala column and per-step item analysis.
+     *
+     * @param array $opts {
+     * @var int        $globalscaleid    Global (root) scale ID. Default 1.
+     * @var int        $testid           local_catquiz_attempts.testid. Default 1.
+     * @var array      $personabilities  Map scaleid => pp.
+     * @var array      $se               Map scaleid => se (use -1 for "no value").
+     * @var array|null $primaryscale     ['id'=>int,'name'=>string] or null.
+     * @var array      $catscales        Map scaleid => ['name'=>string].
+     * @var array      $graphical        graphicalsummary_data step objects.
+     * }
+     * @return string JSON-encoded payload.
+     */
+    public static function build_custom_json(array $opts = []): string {
+        $globalscaleid = $opts['globalscaleid'] ?? 1;
+        $personabilities = $opts['personabilities'] ?? [$globalscaleid => 0.5];
+        $se = $opts['se'] ?? [$globalscaleid => 0.3];
+        $catscales = [];
+        foreach (($opts['catscales'] ?? [$globalscaleid => ['name' => 'TestScale']]) as $sid => $meta) {
+            $catscales[$sid] = (object) $meta;
+        }
+        $primaryscale = null;
+        if (array_key_exists('primaryscale', $opts)) {
+            $primaryscale = $opts['primaryscale'] !== null
+                ? (object) $opts['primaryscale'] : null;
+        } else {
+            $primaryscale = (object) ['id' => $globalscaleid, 'name' => 'TestScale'];
+        }
+        $graphical = [];
+        foreach (($opts['graphical'] ?? []) as $step) {
+            $graphical[] = (object) $step;
+        }
+        return json_encode([
+            'catscaleid' => $globalscaleid,
+            'testid' => $opts['testid'] ?? 1,
+            'personabilities' => $personabilities,
+            'se' => $se,
+            'primaryscale' => $primaryscale,
+            'catscales' => $catscales,
+            'graphicalsummary_data' => $graphical,
+        ]);
+    }
+
+    /**
      * Insert a minimal {adaptivequiz} row for testing.
      *
      * Creates only the {adaptivequiz} record, not a full course-module entry.

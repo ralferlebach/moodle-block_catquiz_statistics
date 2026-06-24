@@ -183,18 +183,15 @@ abstract class base_exporter {
         }
         $writer->addRow(Row::fromValues(array_values($cols), $headerstyle));
         $colkeys = array_keys($cols);
-        // Columns that hold Unix timestamps to be converted to Excel serial dates.
-        $timestampcols = ['starttime', 'endtime'];
+        // Columns that hold Unix timestamps — formatted as "DD.MM.YYYY HH:MM".
+        $timestampcols = ['starttime', 'endtime', 'first_starttime', 'last_starttime'];
         foreach ($rows as $row) {
             $vals = [];
             foreach ($colkeys as $key) {
                 $v = $row[$key] ?? null;
-                if (in_array($key, $timestampcols, true) && (empty($v) || $v == 0)) {
-                    // Suppress zero/null timestamps (endtime=0 means not completed).
-                    $v = null;
-                } else if ($v !== null && in_array($key, $timestampcols, true) && is_numeric($v) && $v > 0) {
-                    // Convert Unix timestamp to Excel serial date (days since 1900-01-00).
-                    $v = ($v / 86400.0) + 25569.0;
+                if (in_array($key, $timestampcols, true)) {
+                    // Suppress zero/null timestamps (endtime = 0 = attempt not completed).
+                    $v = ($v && $v > 0) ? date('d.m.Y H:i', (int) $v) : null;
                 } else if (is_float($v)) {
                     $v = round($v, 4);
                 }
@@ -230,6 +227,12 @@ abstract class base_exporter {
         Style $sectionstyle
     ): void {
         $this->activate_sheet($writer, $sheetnum, $title);
+        // Metadata sheet column widths: A=section(10), B=key(20), C=value(50).
+        if (method_exists($writer, 'getOptions') && method_exists($writer->getOptions(), 'setColumnWidth')) {
+            $writer->getOptions()->setColumnWidth(10.0, 1);
+            $writer->getOptions()->setColumnWidth(20.0, 2);
+            $writer->getOptions()->setColumnWidth(50.0, 3);
+        }
         $writer->addRow(Row::fromValues(array_values($cols), $headerstyle));
         $colkeys = array_keys($cols);
         foreach ($rows as $row) {

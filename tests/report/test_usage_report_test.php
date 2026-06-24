@@ -205,4 +205,207 @@ final class test_usage_report_test extends \basic_testcase {
         $this->assertEqualsWithDelta(0.5, $stats['mean'], 1e-9);
         $this->assertSame(2, $stats['n']);
     }
+
+    /**
+     * Build a DTO with explicit used-items count for summary aggregation tests.
+     *
+     * @param int $userid User ID.
+     * @param int $starttime Start Unix timestamp.
+     * @param int $globalscaleid Global scale ID.
+     * @param float $pp Person ability.
+     * @param float $se Standard error.
+     * @param int $used Used test items.
+     * @return attempt_data
+     */
+    private function make_dto_items(
+        int $userid,
+        int $starttime,
+        int $globalscaleid,
+        float $pp,
+        float $se,
+        int $used
+    ): attempt_data {
+        $dto = $this->make_dto($userid, 10, $starttime, $globalscaleid, $pp, $se);
+        $dto->usedtestitems = $used;
+        return $dto;
+    }
+
+    /**
+     * get_summary_rows() returns one row per user × global scale.
+     */
+    public function test_summary_one_row_per_user_scale(): void {
+        $dtos = [
+            $this->make_dto(1, 10, 1000, 5, 0.5, 0.3),
+            $this->make_dto(1, 10, 2000, 5, 0.7, 0.25),
+            $this->make_dto(2, 10, 1500, 5, 0.4, 0.35),
+        ];
+        $filter = new attempt_filter(courseid: 1);
+        $report = new test_usage_report($this->make_repo($dtos));
+        $rows = $report->get_summary_rows($filter);
+
+        $this->assertCount(2, $rows);
+        $this->assertSame(1, $rows[0]['userid']);
+        $this->assertSame(2, $rows[0]['n_attempts']);
+        $this->assertSame(2, $rows[1]['userid']);
+        $this->assertSame(1, $rows[1]['n_attempts']);
+    }
+
+    /**
+     * n_valid counts only attempts with a non-null person ability.
+     */
+    public function test_summary_n_valid_counts_scored_only(): void {
+        $dto1 = $this->make_dto(1, 10, 1000, 5, 0.5, 0.3);
+        $dto2 = $this->make_dto(1, 10, 2000, 5, 0.7, 0.25);
+        // Third attempt has no ability for the global scale.
+        $dto3 = $this->make_dto(1, 10, 3000, 5, 0.0, 0.3);
+        $dto3->personabilities = [];
+        $filter = new attempt_filter(courseid: 1);
+        $report = new test_usage_report($this->make_repo([$dto1, $dto2, $dto3]));
+        $rows = $report->get_summary_rows($filter);
+
+        $this->assertSame(3, $rows[0]['n_attempts']);
+        $this->assertSame(2, $rows[0]['n_valid']);
+    }
+
+    /**
+     * first/last/worst/best scores are computed across all scored attempts.
+     */
+    public function test_summary_score_extremes(): void {
+        $dtos = [
+            $this->make_dto(1, 10, 1000, 5, 0.5, 0.3),
+            $this->make_dto(1, 10, 2000, 5, 0.9, 0.3),
+            $this->make_dto(1, 10, 3000, 5, 0.2, 0.3),
+        ];
+        $filter = new attempt_filter(courseid: 1);
+        $report = new test_usage_report($this->make_repo($dtos));
+        $row = $report->get_summary_rows($filter)[0];
+
+        $this->assertEqualsWithDelta(0.5, $row['first_score'], 1e-9);
+        $this->assertEqualsWithDelta(0.2, $row['last_score'], 1e-9);
+        $this->assertEqualsWithDelta(0.2, $row['worst_score'], 1e-9);
+        $this->assertEqualsWithDelta(0.9, $row['best_score'], 1e-9);
+    }
+
+    /**
+     * total_items sums used items; items_per_attempt averages over valid attempts.
+     */
+    public function test_summary_item_aggregation(): void {
+        $dtos = [
+            $this->make_dto_items(1, 1000, 5, 0.5, 0.3, 10),
+            $this->make_dto_items(1, 2000, 5, 0.7, 0.3, 20),
+        ];
+        $filter = new attempt_filter(courseid: 1);
+        $report = new test_usage_report($this->make_repo($dtos));
+        $row = $report->get_summary_rows($filter)[0];
+
+        $this->assertSame(30, $row['total_items']);
+        $this->assertEqualsWithDelta(15.0, $row['items_per_attempt'], 1e-9);
+    }
+
+    /**
+     * RCI Start-End uses first and last attempt; only computed with >= 2 valid SE.
+     */
+    public function test_summary_rci_start_end(): void {
+        $dto1 = $this->make_dto(1, 10, 1000, 5, 0.5, 0.3);
+        $dto2 = $this->make_dto(1, 10, 2000, 5, 0.8, 0.25);
+        $filter = new attempt_filter(courseid: 1);
+        $report = new test_usage_report($this->make_repo([$dto1, $dto2]));
+        $row = $report->get_summary_rows($filter)[0];
+
+        $expected = (0.8 - 0.5) / sqrt(0.3 ** 2 + 0.25 ** 2);
+        $this->assertEqualsWithDelta($expected, $row['rci_start_end'], 1e-9);
+    }
+
+    /**
+     * RCI Min-Max uses the best and worst scored attempts.
+     */
+    public function test_summary_rci_min_max(): void {
+        $dtos = [
+            $this->make_dto(1, 10, 1000, 5, 0.5, 0.30),
+            $this->make_dto(1, 10, 2000, 5, 0.9, 0.20),
+            $this->make_dto(1, 10, 3000, 5, 0.2, 0.25),
+        ];
+        $filter = new attempt_filter(courseid: 1);
+        $report = new test_usage_report($this->make_repo($dtos));
+        $row = $report->get_summary_rows($filter)[0];
+
+        // Best=0.9 (se 0.20), worst=0.2 (se 0.25).
+        $expected = (0.9 - 0.2) / sqrt(0.20 ** 2 + 0.25 ** 2);
+        $this->assertEqualsWithDelta($expected, $row['rci_min_max'], 1e-9);
+    }
+
+    /**
+     * A single valid attempt yields null RCI and null trends.
+     */
+    public function test_summary_single_attempt_null_rci_and_trend(): void {
+        $dto = $this->make_dto(1, 10, 1000, 5, 0.5, 0.3);
+        $filter = new attempt_filter(courseid: 1);
+        $report = new test_usage_report($this->make_repo([$dto]));
+        $row = $report->get_summary_rows($filter)[0];
+
+        $this->assertNull($row['rci_start_end']);
+        $this->assertNull($row['rci_min_max']);
+        $this->assertNull($row['score_trend']);
+        $this->assertNull($row['trend_start_end']);
+    }
+
+    /**
+     * Score-Trend is positive when ability rises over time.
+     */
+    public function test_summary_score_trend_positive(): void {
+        // Two attempts one day apart: +0.2 over 1 day → slope +0.2/day.
+        $dtos = [
+            $this->make_dto(1, 10, 1000, 5, 0.5, 0.3),
+            $this->make_dto(1, 10, 1000 + 86400, 5, 0.7, 0.3),
+        ];
+        $filter = new attempt_filter(courseid: 1);
+        $report = new test_usage_report($this->make_repo($dtos));
+        $row = $report->get_summary_rows($filter)[0];
+
+        $this->assertGreaterThan(0, $row['score_trend']);
+        $this->assertEqualsWithDelta(0.2, $row['trend_start_end'], 1e-6);
+    }
+
+    /**
+     * is_first_for_user marks the first row of each user for simulated cell-merging.
+     */
+    public function test_summary_is_first_for_user_flag(): void {
+        $dtos = [
+            $this->make_dto(1, 10, 1000, 5, 0.5, 0.3),
+            $this->make_dto(1, 10, 1500, 6, 0.4, 0.3),
+            $this->make_dto(2, 10, 2000, 5, 0.6, 0.3),
+        ];
+        $filter = new attempt_filter(courseid: 1);
+        $report = new test_usage_report($this->make_repo($dtos));
+        $rows = $report->get_summary_rows($filter);
+
+        // User 1 appears on two scales: first row flagged, second not.
+        $this->assertTrue($rows[0]['is_first_for_user']);
+        $this->assertFalse($rows[1]['is_first_for_user']);
+        // User 2's first row flagged again.
+        $this->assertTrue($rows[2]['is_first_for_user']);
+    }
+
+    /**
+     * Flat download rows are sorted by userid, globalscaleid, starttime ascending.
+     */
+    public function test_flat_rows_download_sort_order(): void {
+        $dtos = [
+            $this->make_dto(2, 10, 1000, 5, 0.5, 0.3),
+            $this->make_dto(1, 10, 3000, 6, 0.4, 0.3),
+            $this->make_dto(1, 10, 1000, 5, 0.6, 0.3),
+            $this->make_dto(1, 10, 2000, 5, 0.7, 0.3),
+        ];
+        $filter = new attempt_filter(courseid: 1);
+        $report = new test_usage_report($this->make_repo($dtos));
+        $rows = $report->get_flat_rows($filter);
+
+        // Expected order: u1/s5/t1000, u1/s5/t2000, u1/s6/t3000, u2/s5/t1000.
+        $this->assertSame(1, $rows[0]['userid']);
+        $this->assertSame(5, $rows[0]['global_scale_id']);
+        $this->assertSame(1000, $rows[0]['starttime']);
+        $this->assertSame(2000, $rows[1]['starttime']);
+        $this->assertSame(6, $rows[2]['global_scale_id']);
+        $this->assertSame(2, $rows[3]['userid']);
+    }
 }

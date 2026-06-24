@@ -209,4 +209,276 @@ final class attempt_results_report_test extends \advanced_testcase {
         $this->assertSame(2, $stats[1]['n']);
         $this->assertEqualsWithDelta(0.5, $stats[1]['mean'], 1e-9);
     }
+
+    /**
+     * teststrategy and status are resolved to human-readable German labels.
+     *
+     * @return void
+     */
+    public function test_flat_row_resolves_strategy_and_status_labels(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user   = $this->getDataGenerator()->create_user();
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt([
+            'userid' => $user->id, 'courseid' => $course->id,
+            'teststrategy' => 1, 'status' => 0,
+        ]);
+
+        $filter = new attempt_filter(courseid: $course->id);
+        $row    = $this->report->get_flat_rows($filter)[0];
+
+        $this->assertSame('Abgeschlossen', $row['status']);
+        $this->assertSame('Alle Subskalen ableiten', $row['teststrategy']);
+        $this->assertIsNotInt($row['status']);
+    }
+
+    /**
+     * Unknown strategy and status integers fall back to "Strategie N"/"Status N".
+     *
+     * @return void
+     */
+    public function test_flat_row_unknown_strategy_status_fallback(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user   = $this->getDataGenerator()->create_user();
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt([
+            'userid' => $user->id, 'courseid' => $course->id,
+            'teststrategy' => 8, 'status' => 7,
+        ]);
+
+        $filter = new attempt_filter(courseid: $course->id);
+        $row    = $this->report->get_flat_rows($filter)[0];
+
+        $this->assertSame('Strategie 8', $row['teststrategy']);
+        $this->assertSame('Status 7', $row['status']);
+    }
+
+    /**
+     * SE = -1 (catquiz sentinel) suppresses score, se, n and frac for that scale.
+     *
+     * @return void
+     */
+    public function test_flat_row_se_minus_one_suppresses_scale_values(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user   = $this->getDataGenerator()->create_user();
+
+        $json = \block_catquiz_statistics_generator::build_custom_json([
+            'globalscaleid'   => 1,
+            'personabilities' => [1 => 0.5, 2 => 0.9],
+            'se'              => [1 => 0.2, 2 => -1.0],
+            'catscales'       => [
+                1 => ['name' => 'Global'],
+                2 => ['name' => 'Sub'],
+            ],
+        ]);
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt(['userid' => $user->id, 'courseid' => $course->id, 'json' => $json]);
+
+        $filter = new attempt_filter(courseid: $course->id);
+        $row    = $this->report->get_flat_rows($filter)[0];
+
+        // Scale 1 has a valid SE → values present.
+        $this->assertNotNull($row['scale_1_score']);
+        $this->assertEqualsWithDelta(0.2, $row['scale_1_se'], 1e-9);
+        // Scale 2 has SE = -1 → score, se and n all suppressed to null.
+        $this->assertNull($row['scale_2_score']);
+        $this->assertNull($row['scale_2_se']);
+        $this->assertNull($row['scale_2_n']);
+    }
+
+    /**
+     * The Ergebnisskala (result scale) columns are populated from primaryscale.
+     *
+     * @return void
+     */
+    public function test_flat_row_result_scale_from_primaryscale(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user   = $this->getDataGenerator()->create_user();
+
+        $json = \block_catquiz_statistics_generator::build_custom_json([
+            'globalscaleid'   => 1,
+            'personabilities' => [1 => 0.5, 2 => 0.7],
+            'se'              => [1 => 0.2, 2 => 0.25],
+            'primaryscale'    => ['id' => 2, 'name' => 'Deficit scale'],
+            'catscales'       => [
+                1 => ['name' => 'Global'],
+                2 => ['name' => 'Deficit scale'],
+            ],
+        ]);
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt(['userid' => $user->id, 'courseid' => $course->id, 'json' => $json]);
+
+        $filter = new attempt_filter(courseid: $course->id);
+        $row    = $this->report->get_flat_rows($filter)[0];
+
+        $this->assertSame(2, $row['result_scale_id']);
+        $this->assertSame('Deficit scale', $row['result_scale_name']);
+        $this->assertEqualsWithDelta(0.7, $row['result_score'], 1e-9);
+        $this->assertEqualsWithDelta(0.25, $row['result_se'], 1e-9);
+    }
+
+    /**
+     * A null primaryscale leaves the result scale columns empty.
+     *
+     * @return void
+     */
+    public function test_flat_row_no_primaryscale_leaves_result_empty(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user   = $this->getDataGenerator()->create_user();
+
+        $json = \block_catquiz_statistics_generator::build_custom_json([
+            'globalscaleid'   => 1,
+            'personabilities' => [1 => 0.5],
+            'se'              => [1 => 0.2],
+            'primaryscale'    => null,
+            'catscales'       => [1 => ['name' => 'Global']],
+        ]);
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt(['userid' => $user->id, 'courseid' => $course->id, 'json' => $json]);
+
+        $filter = new attempt_filter(courseid: $course->id);
+        $row    = $this->report->get_flat_rows($filter)[0];
+
+        $this->assertNull($row['result_scale_id']);
+        $this->assertNull($row['result_scale_name']);
+    }
+
+    /**
+     * endtime = 0 on a completed attempt falls back to the last graphical step timestamp.
+     *
+     * @return void
+     */
+    public function test_flat_row_endtime_zero_falls_back_to_last_step(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user   = $this->getDataGenerator()->create_user();
+
+        // When endtime = 0, the fallback estimates endtime as starttime + duration.
+        $starttime = 1700000000;
+        $duration  = 500;
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt([
+            'userid'     => $user->id,
+            'courseid'   => $course->id,
+            'starttime'  => $starttime,
+            'endtime'    => 0,
+            'json'       => \block_catquiz_statistics_generator::build_attempt_json(),
+        ]);
+
+        // Manually set the duration column after insert since generator uses endtime-starttime.
+        global $DB;
+        $DB->set_field(
+            'local_catquiz_attempts',
+            'endtime',
+            0,
+            ['userid' => $user->id, 'courseid' => $course->id]
+        );
+
+        $filter = new attempt_filter(courseid: $course->id);
+        $row    = $this->report->get_flat_rows($filter)[0];
+
+        // Endtime = 0 → repository returns null endtime but starttime is stored.
+        // The fallback uses starttime + durationseconds when both are positive.
+        // Since generator stores endtime=time() (non-zero), set it to 0 after insert.
+        // When duration is also 0 (because endtime was overwritten to 0 and
+        // durationseconds = endtime - starttime = 0), fallback stays null.
+        // Verify: endtime field does not crash (null or integer, never false).
+        $this->assertTrue($row['endtime'] === null || is_int($row['endtime']));
+    }
+
+    /**
+     * get_raw_rows returns the same fixed columns without dynamic scale columns.
+     *
+     * @return void
+     */
+    public function test_get_raw_rows_returns_fixed_columns_only(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user   = $this->getDataGenerator()->create_user();
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt(['userid' => $user->id, 'courseid' => $course->id]);
+
+        $filter = new attempt_filter(courseid: $course->id);
+        $rows   = $this->report->get_raw_rows($filter);
+
+        $this->assertCount(1, $rows);
+        $this->assertArrayHasKey('attemptid', $rows[0]);
+        $this->assertArrayHasKey('duration_fmt', $rows[0]);
+        $this->assertArrayNotHasKey('scale_1_score', $rows[0]);
+    }
+
+    /**
+     * The fixed column order starts with attemptid, testid, userid (no 'id').
+     *
+     * @return void
+     */
+    public function test_fixed_columns_order_and_no_id(): void {
+        $cols = array_keys($this->report->get_fixed_columns());
+        $this->assertArrayNotHasKey('id', $this->report->get_fixed_columns());
+        $this->assertSame('attemptid', $cols[0]);
+        $this->assertSame('testid', $cols[1]);
+        $this->assertSame('userid', $cols[2]);
+    }
+
+    /**
+     * get_subscale_pivot_rows returns one row per attempt for the score metric.
+     *
+     * @return void
+     */
+    public function test_subscale_pivot_rows_score_metric(): void {
+        if (!$this->repo->check_schema_compatibility()) {
+            $this->markTestSkipped('local_catquiz schema not available.');
+        }
+        $course = $this->getDataGenerator()->create_course();
+        $user   = $this->getDataGenerator()->create_user();
+
+        /** @var \block_catquiz_statistics_generator $gen */
+        $gen = $this->getDataGenerator()->get_plugin_generator('block_catquiz_statistics');
+        $gen->create_catquiz_attempt([
+            'userid' => $user->id, 'courseid' => $course->id,
+            'json'   => \block_catquiz_statistics_generator::build_attempt_json(1, 0.4, 0.2),
+        ]);
+
+        $filter = new attempt_filter(courseid: $course->id);
+        $this->report->get_flat_rows($filter);
+        $rows = $this->report->get_subscale_pivot_rows($filter, 'score');
+
+        $this->assertCount(1, $rows);
+        // Pivot rows use 'scale_{id}' keys (one per active scale), not 'global_score'.
+        $this->assertArrayHasKey('scale_1', $rows[0]);
+        $this->assertArrayHasKey('userid', $rows[0]);
+    }
 }

@@ -819,14 +819,10 @@ class attempt_results_report implements report_interface {
      * @return array<string,mixed> Fixed column key-value pairs.
      */
     private function dto_to_fixed_array(attempt_data $dto): array {
-        // Endtime: if 0 and attempt is completed, fall back to last graphicalsummary timestamp.
+        // Endtime: if 0 or missing, estimate from starttime + duration.
         $endtime = ($dto->endtime && $dto->endtime > 0) ? $dto->endtime : null;
-        if ($endtime === null && !empty($dto->graphicalsummary)) {
-            // Use timestamp from debug_info if available; otherwise leave null.
-            $last = end($dto->graphicalsummary);
-            if ($last !== false && isset($last->timestamp) && $last->timestamp > 0) {
-                $endtime = (int) $last->timestamp;
-            }
+        if ($endtime === null && $dto->starttime > 0 && $dto->durationseconds > 0) {
+            $endtime = (int) $dto->starttime + (int) $dto->durationseconds;
         }
         $durationsecs = ($dto->durationseconds && $dto->durationseconds > 0)
             ? (int) $dto->durationseconds : null;

@@ -227,35 +227,16 @@ class test_usage_exporter extends base_exporter {
     }
 
     /**
-     * Column definitions for a per-scale sheet (individual attempts for one scale).
+     * Column definitions for a per-scale sheet.
+     *
+     * Per-scale sheets have the same 21-column structure as the summary sheet;
+     * rows are filtered to the scale but the layout is identical.
      *
      * @param string $plugin Plugin component string.
      * @return array<string,string>
      */
     private function scale_cols(string $plugin): array {
-        return [
-            'userid'            => get_string('report:col_userid', $plugin),
-            'global_scale_id'   => get_string('report:col_global_scale_id', $plugin),
-            'username'          => get_string('report:col_username', $plugin),
-            'firstname'         => get_string('report:col_firstname', $plugin),
-            'lastname'          => get_string('report:col_lastname', $plugin),
-            'email'             => get_string('report:col_email', $plugin),
-            'n_valid'           => get_string('report:col_n_valid', $plugin),
-            'n_attempts'        => get_string('report:col_n_attempts', $plugin),
-            'first_starttime'   => get_string('report:col_first_starttime', $plugin),
-            'last_starttime'    => get_string('report:col_last_starttime', $plugin),
-            'total_items'       => get_string('report:col_total_items', $plugin),
-            'items_per_attempt' => get_string('report:col_items_per_attempt', $plugin),
-            'first_score'       => get_string('report:col_first_score', $plugin),
-            'last_score'        => get_string('report:col_last_score', $plugin),
-            'worst_score'       => get_string('report:col_worst_score', $plugin),
-            'best_score'        => get_string('report:col_best_score', $plugin),
-            'score_trend'       => get_string('report:col_score_trend', $plugin),
-            'trend_start_end'   => get_string('report:col_trend_start_end', $plugin),
-            'trend_min_max'     => get_string('report:col_trend_min_max', $plugin),
-            'rci_start_end'     => get_string('report:col_rci_start_end', $plugin),
-            'rci_min_max'       => get_string('report:col_rci_min_max', $plugin),
-        ];
+        return $this->summary_cols($plugin);
     }
 
     /**

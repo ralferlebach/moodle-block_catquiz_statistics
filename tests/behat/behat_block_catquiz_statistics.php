@@ -103,6 +103,54 @@ class behat_block_catquiz_statistics extends behat_base {
     }
 
     /**
+     * Navigate to a specific report module tab within a course.
+     *
+     * @When I am on the :shortname course catquiz_statistics :moduleid module
+     * @param string $shortname Course shortname.
+     * @param string $moduleid Module ID (results, usage, progress, activity, items).
+     * @return void
+     */
+    public function i_am_on_the_course_module(string $shortname, string $moduleid): void {
+        global $DB;
+
+        $course = $DB->get_record('course', ['shortname' => $shortname], '*', MUST_EXIST);
+        $url = new moodle_url(
+            '/blocks/catquiz_statistics/report.php',
+            ['courseid' => $course->id, 'moduleid' => $moduleid]
+        );
+        $this->getSession()->visit($this->locate_path($url->out(false)));
+    }
+
+    /**
+     * Create a catquiz attempt for a user in a course via the data generator.
+     *
+     * @Given a catquiz attempt exists for :username in course :shortname
+     * @param string $username User username.
+     * @param string $shortname Course shortname.
+     * @return void
+     */
+    public function a_catquiz_attempt_exists(string $username, string $shortname): void {
+        global $DB, $CFG;
+        require_once($CFG->libdir . '/testing/generator/lib.php');
+
+        if (!$DB->get_manager()->table_exists('local_catquiz_attempts')) {
+            throw new \Moodle\BehatExtension\Exception\SkippedException(
+                'local_catquiz is not installed; cannot create attempt fixtures.'
+            );
+        }
+
+        $course = $DB->get_record('course', ['shortname' => $shortname], '*', MUST_EXIST);
+        $user = $DB->get_record('user', ['username' => $username], '*', MUST_EXIST);
+
+        $generator = testing_util::get_data_generator()
+            ->get_plugin_generator('block_catquiz_statistics');
+        $generator->create_catquiz_attempt([
+            'userid'   => $user->id,
+            'courseid' => $course->id,
+        ]);
+    }
+
+    /**
      * Assert that the catquiz_statistics block report link is visible.
      *
      * @Then the catquiz_statistics report link should be visible

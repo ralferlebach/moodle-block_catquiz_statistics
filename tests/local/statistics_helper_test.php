@@ -211,4 +211,46 @@ final class statistics_helper_test extends \basic_testcase {
             }
         }
     }
+
+    /**
+     * strategy_label maps known strategy constants 1–6 to German labels.
+     *
+     * @return void
+     */
+    public function test_strategy_label_known_values(): void {
+        $this->assertSame('Alle Subskalen ableiten', statistics_helper::strategy_label(1));
+        $this->assertSame('Niedrigste Subskala', statistics_helper::strategy_label(2));
+        $this->assertSame('Pilot', statistics_helper::strategy_label(6));
+    }
+
+    /**
+     * strategy_label falls back to "Strategie N" for unknown values and '' for null.
+     *
+     * @return void
+     */
+    public function test_strategy_label_fallback_and_null(): void {
+        $this->assertSame('Strategie 8', statistics_helper::strategy_label(8));
+        $this->assertSame('', statistics_helper::strategy_label(null));
+    }
+
+    /**
+     * status_label maps 0 to "Abgeschlossen" and treats 4 as in progress.
+     *
+     * @return void
+     */
+    public function test_status_label_known_values(): void {
+        $this->assertSame('Abgeschlossen', statistics_helper::status_label(0));
+        $this->assertSame('In Bearbeitung', statistics_helper::status_label(1));
+        $this->assertSame('In Bearbeitung', statistics_helper::status_label(4));
+    }
+
+    /**
+     * status_label falls back to "Status N" for unknown values and '' for null.
+     *
+     * @return void
+     */
+    public function test_status_label_fallback_and_null(): void {
+        $this->assertSame('Status 9', statistics_helper::status_label(9));
+        $this->assertSame('', statistics_helper::status_label(null));
+    }
 }

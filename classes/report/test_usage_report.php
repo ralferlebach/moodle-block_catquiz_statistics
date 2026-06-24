@@ -200,44 +200,114 @@ class test_usage_report implements report_interface {
             $globalscaleid = $first->globalscaleid;
             $scalename = $globalscaleid !== null
                 ? ($first->catscales[$globalscaleid]->name ?? null) : null;
+            $nattempts = count($group);
 
-            // Collect valid (non-null) pp and se values in time order.
-            $validpairs = [];
+            // Collect scored attempts (pp !== null) with starttime and se.
+            $scored = [];
             foreach ($group as $dto) {
                 $pp = $this->global_pp($dto);
                 $se = $globalscaleid !== null ? ($dto->se[$globalscaleid] ?? null) : null;
                 if ($pp !== null) {
-                    $validpairs[] = ['pp' => $pp, 'se' => $se];
+                    $scored[] = [
+                        'pp'        => $pp,
+                        'se'        => $se,
+                        'starttime' => $dto->starttime ?? 0,
+                        'used'      => $dto->usedtestitems ?? 0,
+                    ];
+                }
+            }
+            $nvalid = count($scored);
+
+            $firstpp = $nvalid > 0 ? $scored[0]['pp'] : null;
+            $lastpp  = $nvalid > 0 ? $scored[$nvalid - 1]['pp'] : null;
+            $allpp   = array_column($scored, 'pp');
+            $bestpp  = $nvalid > 0 ? max($allpp) : null;
+            $worstpp = $nvalid > 0 ? min($allpp) : null;
+
+            // Items.
+            $totalitems = array_sum(array_column($group, 'usedtestitems'));
+            $itemspva = $nvalid > 0 ? round($totalitems / $nvalid, 1) : null;
+
+            // First/last starttime.
+            $firsttime = $first->starttime ?? null;
+            $lasttime  = end($group)->starttime ?? null;
+
+            // RCI Start-End.
+            $rcistartend = null;
+            $deltastartend = null;
+            if ($nvalid >= 2) {
+                $se1 = $scored[0]['se'];
+                $se2 = $scored[$nvalid - 1]['se'];
+                $deltastartend = $lastpp - $firstpp;
+                if ($se1 !== null && $se2 !== null && ($se1 ** 2 + $se2 ** 2) > 0) {
+                    $rcistartend = $deltastartend / sqrt($se1 ** 2 + $se2 ** 2);
                 }
             }
 
-            $best = empty($validpairs) ? null
-                : max(array_column($validpairs, 'pp'));
+            // RCI Min-Max.
+            $rciminmax = null;
+            $deltaminmax = null;
+            if ($nvalid >= 2 && $bestpp !== null && $worstpp !== null) {
+                $bestidx  = array_search($bestpp, $allpp, true);
+                $worstidx = array_search($worstpp, $allpp, true);
+                $sebest   = $bestidx !== false ? $scored[$bestidx]['se'] : null;
+                $seworst  = $worstidx !== false ? $scored[$worstidx]['se'] : null;
+                $deltaminmax = $bestpp - $worstpp;
+                if ($sebest !== null && $seworst !== null && ($sebest ** 2 + $seworst ** 2) > 0) {
+                    $rciminmax = $deltaminmax / sqrt($sebest ** 2 + $seworst ** 2);
+                }
+            }
 
-            $delta = null;
-            $rci = null;
-            if (count($validpairs) >= 2) {
-                $firstpair = $validpairs[0];
-                $lastpair = $validpairs[count($validpairs) - 1];
-                $delta = $lastpair['pp'] - $firstpair['pp'];
-                $se1 = $firstpair['se'];
-                $se2 = $lastpair['se'];
-                if ($se1 !== null && $se2 !== null && ($se1 ** 2 + $se2 ** 2) > 0) {
-                    $rci = $delta / sqrt($se1 ** 2 + $se2 ** 2);
+            // Score-Trend: slope of linear regression pp ~ starttime (in days).
+            $trend = $this->compute_trend($scored);
+
+            // Trend Start-End: (last - first) / time-diff in days.
+            $trendstartend = null;
+            if ($nvalid >= 2 && $deltastartend !== null) {
+                $daydiff = ($scored[$nvalid - 1]['starttime'] - $scored[0]['starttime']) / 86400.0;
+                if ($daydiff > 0) {
+                    $trendstartend = $deltastartend / $daydiff;
+                }
+            }
+
+            // Trend Min-Max: (max - min) / time-diff between those attempts in days.
+            $trendminmax = null;
+            if ($nvalid >= 2 && $deltaminmax !== null) {
+                $bestidx  = array_search($bestpp, $allpp, true);
+                $worstidx = array_search($worstpp, $allpp, true);
+                if ($bestidx !== false && $worstidx !== false) {
+                    $tdiff = abs(
+                        $scored[$bestidx]['starttime'] - $scored[$worstidx]['starttime']
+                    ) / 86400.0;
+                    if ($tdiff > 0) {
+                        $trendminmax = $deltaminmax / $tdiff;
+                    }
                 }
             }
 
             $rows[] = [
                 'is_first_for_user' => ($first->userid !== $prevuserid),
-                'userid'        => $first->userid,
-                'firstname'     => $first->firstname,
-                'lastname'      => $first->lastname,
-                'global_scale_id' => $globalscaleid,
-                'global_scale_name' => $scalename,
-                'n_attempts'    => count($group),
-                'best_score'    => $best,
-                'delta_ability' => $delta,
-                'rci'           => $rci,
+                'userid'            => $first->userid,
+                'global_scale_id'   => $globalscaleid,
+                'username'          => $first->username,
+                'firstname'         => $first->firstname,
+                'lastname'          => $first->lastname,
+                'email'             => $first->email,
+                'n_valid'           => $nvalid,
+                'n_attempts'        => $nattempts,
+                'first_starttime'   => $firsttime,
+                'last_starttime'    => $lasttime,
+                'total_items'       => $totalitems,
+                'items_per_attempt' => $itemspva,
+                'first_score'       => $firstpp,
+                'last_score'        => $lastpp,
+                'worst_score'       => $worstpp,
+                'best_score'        => $bestpp,
+                'score_trend'       => $trend,
+                'trend_start_end'   => $trendstartend,
+                'trend_min_max'     => $trendminmax,
+                'rci_start_end'     => $rcistartend,
+                'rci_min_max'       => $rciminmax,
             ];
 
             $prevuserid = $first->userid;
@@ -246,11 +316,32 @@ class test_usage_report implements report_interface {
     }
 
     /**
-     * Group a sorted list of DTOs by user ID × instance ID.
+     * Compute slope of linear regression pp ~ starttime (in days).
      *
-     * @param attempt_data[] $dtos Sorted DTOs.
-     * @return array[] Array of groups; each group is an array of attempt_data.
+     * Returns null when fewer than two distinct time points are available.
+     * The slope unit is score change per day.
+     *
+     * @param array[] $scored Scored attempts [{pp, se, starttime, used}].
+     * @return float|null
      */
+    private function compute_trend(array $scored): ?float {
+        $n = count($scored);
+        if ($n < 2) {
+            return null;
+        }
+        $t0 = $scored[0]['starttime'];
+        $xs = array_map(static fn($s) => ($s['starttime'] - $t0) / 86400.0, $scored);
+        $ys = array_column($scored, 'pp');
+        $xmean = array_sum($xs) / $n;
+        $ymean = array_sum($ys) / $n;
+        $num = 0.0;
+        $den = 0.0;
+        for ($i = 0; $i < $n; $i++) {
+            $num += ($xs[$i] - $xmean) * ($ys[$i] - $ymean);
+            $den += ($xs[$i] - $xmean) ** 2;
+        }
+        return $den > 0 ? round($num / $den, 3) : null;
+    }
 
     /**
      * Sort DTOs by userid ASC, globalscaleid ASC, starttime ASC.
