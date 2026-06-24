@@ -94,6 +94,8 @@ if ($courseid > 0 && $schemaok) {
 
 $flatrows = $schemaok ? $report->get_flat_rows($filter) : [];
 $widecols = $report->get_columns();
+$summaryrows = ($schemaok && $moduleid === 'usage' && method_exists($report, 'get_summary_rows'))
+    ? $report->get_summary_rows($filter) : [];
 
 $reportpage = new report_page(
     courseid: 0,
@@ -108,7 +110,8 @@ $reportpage = new report_page(
     courses: $courses,
     selectedcourseid: $courseid,
     reporturlpath: '/blocks/catquiz_statistics/adminreport.php',
-    moduleid: $moduleid
+    moduleid: $moduleid,
+    summaryrows: $summaryrows
 );
 
 echo $OUTPUT->header();

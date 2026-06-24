@@ -112,6 +112,9 @@ $schemaok  = $repo->check_schema_compatibility();
 $instances = $schemaok ? $repo->get_catquiz_instances_for_course($courseid) : [];
 $flatrows  = $schemaok ? $report->get_flat_rows($filter) : [];
 $widecols  = $report->get_columns();
+// Aggregated summary rows for the Modul B browser table (user × global scale).
+$summaryrows = ($schemaok && $moduleid === 'usage' && method_exists($report, 'get_summary_rows'))
+    ? $report->get_summary_rows($filter) : [];
 
 $reportpage = new report_page(
     courseid: $courseid,
@@ -123,7 +126,8 @@ $reportpage = new report_page(
     enddate: $enddate,
     schemaok: $schemaok,
     moduleid: $moduleid,
-    reporturlpath: '/blocks/catquiz_statistics/report.php'
+    reporturlpath: '/blocks/catquiz_statistics/report.php',
+    summaryrows: $summaryrows
 );
 
 echo $OUTPUT->header();

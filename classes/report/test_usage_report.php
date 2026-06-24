@@ -94,19 +94,19 @@ class test_usage_report implements report_interface {
             return [];
         }
 
-        // Re-sort ascending by starttime for correct rank assignment.
+        // Sort: userid ASC, globalscaleid ASC, starttime ASC.
         usort($dtos, static function (attempt_data $a, attempt_data $b): int {
             if ($a->userid !== $b->userid) {
                 return $a->userid <=> $b->userid;
             }
-            if ($a->instanceid !== $b->instanceid) {
-                return ($a->instanceid ?? 0) <=> ($b->instanceid ?? 0);
+            if (($a->globalscaleid ?? 0) !== ($b->globalscaleid ?? 0)) {
+                return ($a->globalscaleid ?? 0) <=> ($b->globalscaleid ?? 0);
             }
             return ($a->starttime ?? 0) <=> ($b->starttime ?? 0);
         });
 
-        // Group by user × instance.
-        $groups = $this->group_by_user_instance($dtos);
+        // Group by user × globalscale for rank assignment.
+        $groups = $this->group_by_user_globalscale($dtos);
 
         $rows = [];
         foreach ($groups as $group) {
@@ -169,8 +169,125 @@ class test_usage_report implements report_interface {
         ];
     }
 
+
+    /**
+     * Return aggregated summary rows for the browser table.
+     *
+     * One row per user × global scale (sorted by userid ASC, globalscaleid ASC).
+     * Each row summarises all attempts for that user × scale combination:
+     *   - n_attempts: total attempts
+     *   - best_score: highest global ability value
+     *   - delta_ability: ability change from first to last valid attempt (last − first)
+     *   - rci: RCI between first and last valid attempt
+     *
+     * The frontend renders this with simulated cell-merging: for consecutive rows
+     * with the same userid, the name columns carry an 'is_first' flag so the
+     * Mustache template can suppress repeated values.
+     *
+     * @param attempt_filter $filter Query scope.
+     * @return array[]
+     */
+    public function get_summary_rows(attempt_filter $filter): array {
+        $dtos = $this->repository->get_attempts($filter);
+        if (empty($dtos)) {
+            return [];
+        }
+
+        // Sort by userid ASC, then globalscaleid ASC, then starttime ASC.
+        usort($dtos, static function (attempt_data $a, attempt_data $b): int {
+            if ($a->userid !== $b->userid) {
+                return $a->userid <=> $b->userid;
+            }
+            if (($a->globalscaleid ?? 0) !== ($b->globalscaleid ?? 0)) {
+                return ($a->globalscaleid ?? 0) <=> ($b->globalscaleid ?? 0);
+            }
+            return ($a->starttime ?? 0) <=> ($b->starttime ?? 0);
+        });
+
+        // Group by user × globalscaleid.
+        $groups = [];
+        foreach ($dtos as $dto) {
+            $key = $dto->userid . '_' . ($dto->globalscaleid ?? 0);
+            $groups[$key][] = $dto;
+        }
+
+        $rows = [];
+        $prevuserid = null;
+        foreach ($groups as $group) {
+            $first = $group[0];
+            $globalscaleid = $first->globalscaleid;
+            $scalename = $globalscaleid !== null
+                ? ($first->catscales[$globalscaleid]->name ?? null) : null;
+
+            // Collect valid (non-null) pp and se values in time order.
+            $validpairs = [];
+            foreach ($group as $dto) {
+                $pp = $this->global_pp($dto);
+                $se = $globalscaleid !== null ? ($dto->se[$globalscaleid] ?? null) : null;
+                if ($pp !== null) {
+                    $validpairs[] = ['pp' => $pp, 'se' => $se];
+                }
+            }
+
+            $best = empty($validpairs) ? null
+                : max(array_column($validpairs, 'pp'));
+
+            $delta = null;
+            $rci = null;
+            if (count($validpairs) >= 2) {
+                $firstpair = $validpairs[0];
+                $lastpair = $validpairs[count($validpairs) - 1];
+                $delta = $lastpair['pp'] - $firstpair['pp'];
+                $se1 = $firstpair['se'];
+                $se2 = $lastpair['se'];
+                if ($se1 !== null && $se2 !== null && ($se1 ** 2 + $se2 ** 2) > 0) {
+                    $rci = $delta / sqrt($se1 ** 2 + $se2 ** 2);
+                }
+            }
+
+            $rows[] = [
+                'is_first_for_user' => ($first->userid !== $prevuserid),
+                'userid'        => $first->userid,
+                'firstname'     => $first->firstname,
+                'lastname'      => $first->lastname,
+                'global_scale_id' => $globalscaleid,
+                'global_scale_name' => $scalename,
+                'n_attempts'    => count($group),
+                'best_score'    => $best,
+                'delta_ability' => $delta,
+                'rci'           => $rci,
+            ];
+
+            $prevuserid = $first->userid;
+        }
+        return $rows;
+    }
+
     /**
      * Group a sorted list of DTOs by user ID × instance ID.
+     *
+     * @param attempt_data[] $dtos Sorted DTOs.
+     * @return array[] Array of groups; each group is an array of attempt_data.
+     */
+    /**
+     * Group DTOs by user ID × global scale ID.
+     *
+     * Used for get_flat_rows() rank assignment and download sort order.
+     *
+     * @param attempt_data[] $dtos Sorted DTOs.
+     * @return array[] Array of groups; each group is an array of attempt_data.
+     */
+    private function group_by_user_globalscale(array $dtos): array {
+        $groups = [];
+        foreach ($dtos as $dto) {
+            $key = $dto->userid . '_' . ($dto->globalscaleid ?? 0);
+            $groups[$key][] = $dto;
+        }
+        return array_values($groups);
+    }
+
+    /**
+     * Group DTOs by user ID × instance ID (legacy grouping, kept for test compatibility).
      *
      * @param attempt_data[] $dtos Sorted DTOs.
      * @return array[] Array of groups; each group is an array of attempt_data.

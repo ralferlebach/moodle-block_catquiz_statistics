@@ -55,6 +55,9 @@ class report_page implements renderable, templatable {
     /** @var array[] Flat attempt rows from attempt_results_report::get_flat_rows(). */
     private array $flatrows;
 
+    /** @var array[] Aggregated summary rows for browser display (module usage). */
+    private array $summaryrows;
+
     /** @var array<string,string> Wide column key to header label map. */
     private array $widecols;
 
@@ -110,6 +113,7 @@ class report_page implements renderable, templatable {
      * @param int $selectedcourseid Currently selected course in system-wide mode.
      * @param string $reporturlpath URL path to report PHP file.
      * @param string $moduleid Active report module ID ('results', 'usage', …).
+     * @param array $summaryrows Aggregated summary rows for module usage browser view.
      */
     public function __construct(
         int $courseid,
@@ -124,7 +128,8 @@ class report_page implements renderable, templatable {
         array $courses = [],
         int $selectedcourseid = 0,
         string $reporturlpath = '/blocks/catquiz_statistics/report.php',
-        string $moduleid = 'results'
+        string $moduleid = 'results',
+        array $summaryrows = []
     ) {
         $this->courseid = $courseid;
         $this->filter = $filter;
@@ -139,6 +144,7 @@ class report_page implements renderable, templatable {
         $this->selectedcourseid = $selectedcourseid;
         $this->reporturlpath = $reporturlpath;
         $this->moduleid = $moduleid;
+        $this->summaryrows = $summaryrows;
     }
 
     /**
@@ -157,9 +163,13 @@ class report_page implements renderable, templatable {
             $headers[] = ['label' => $h];
         }
 
+        // For usage module use the pre-aggregated summary rows; others use flat rows.
+        $displayrows = ($this->moduleid === 'usage' && !empty($this->summaryrows))
+            ? $this->summaryrows : $this->flatrows;
+
         // Build table rows using the module-specific cell builder.
         $tablerows = [];
-        foreach ($this->flatrows as $row) {
+        foreach ($displayrows as $row) {
             $tablerows[] = ['cells' => $this->build_display_cells_for_module($row, $plugin)];
         }
 
@@ -186,11 +196,27 @@ class report_page implements renderable, templatable {
 
         // Build export format options. Default selection comes from the admin setting.
         $defaultformat = get_config('block_catquiz_statistics', 'defaultformat') ?: 'csv';
+        // Sheet counts per module for multi-sheet formats.
+        $sheetcounts = [
+            'results' => 8,
+            'usage'   => 1,
+            'progress'=> 1,
+            'activity'=> 0,
+            'items'   => 1,
+        ];
+        $sheets = $sheetcounts[$this->moduleid] ?? 1;
+        $xlsxlabel = $sheets > 1
+            ? get_string('report:format_excel', $plugin)
+            : 'Excel (XLSX, ' . $sheets . ' ' . get_string('report:sheet', $plugin) . ')';
+        $odslabel = $sheets > 1
+            ? get_string('report:format_ods', $plugin)
+            : 'ODS (' . $sheets . ' ' . get_string('report:sheet', $plugin) . ')';
+
         $formatlabels = [
             'csv'   => get_string('report:format_csv', $plugin),
             'json'  => get_string('report:format_json', $plugin),
-            'excel' => get_string('report:format_excel', $plugin),
-            'ods'   => get_string('report:format_ods', $plugin),
+            'excel' => $xlsxlabel,
+            'ods'   => $odslabel,
         ];
         $formatoptions = [];
         foreach ($formatlabels as $value => $flabel) {
@@ -259,12 +285,9 @@ class report_page implements renderable, templatable {
                 return [
                     get_string('report:col_firstname', $plugin) . ' '
                         . get_string('report:col_lastname', $plugin),
-                    get_string('report:col_testname', $plugin),
-                    get_string('report:col_attempt_rank', $plugin),
-                    get_string('report:col_starttime', $plugin),
-                    get_string('report:col_status', $plugin),
-                    get_string('report:col_global_pp', $plugin),
-                    get_string('report:col_global_se', $plugin),
+                    get_string('report:col_global_scale_name', $plugin),
+                    get_string('report:col_n_attempts', $plugin),
+                    get_string('report:col_best_score', $plugin),
                     get_string('report:col_delta_ability', $plugin),
                     get_string('report:col_rci', $plugin),
                 ];
