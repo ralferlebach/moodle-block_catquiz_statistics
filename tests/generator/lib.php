@@ -171,7 +171,7 @@ class block_catquiz_statistics_generator extends testing_block_generator {
             'scaleid' => 1,
             'contextid' => 1,
             'courseid' => 1,
-            'attemptid' => 1,
+            'attemptid' => null,
             'component' => 'mod_adaptivequiz',
             'instanceid' => 1,
             'teststrategy' => 1,
@@ -189,6 +189,15 @@ class block_catquiz_statistics_generator extends testing_block_generator {
         ];
 
         $record = array_merge($defaults, $overrides);
+
+        // Seit local_catquiz 1.2.0 ist attemptid UNIQUE (Issue #5): pro
+        // adaptivequiz_attempt höchstens ein CAT-Versuch. Ohne expliziten Wert
+        // vergeben wir daher die nächste freie ID.
+        if ($record['attemptid'] === null) {
+            $max = (int) $DB->get_field_sql('SELECT MAX(attemptid) FROM {local_catquiz_attempts}');
+            $record['attemptid'] = $max + 1;
+        }
+
         return $DB->insert_record('local_catquiz_attempts', (object) $record);
     }
 

@@ -14,24 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace block_catquiz_statistics\analytics;
+
 /**
- * Plugin version definition for block_catquiz_statistics.
+ * Small, fixed set of generic semantic actions (Issue #4).
+ *
+ * The semantics of a milestone is always action + object type. VIEWED means
+ * "opened", never "read" or "understood".
  *
  * @package    block_catquiz_statistics
- * @copyright  2025 Ralf Erlebach
+ * @copyright  2026 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component    = 'block_catquiz_statistics';
-$plugin->version      = 2026092900;
-$plugin->requires     = 2024100700;   // Moodle 4.5.
-$plugin->supported    = [405, 405];   // Tested on Moodle 4.5; extend after 5.x testing.
-$plugin->maturity     = MATURITY_ALPHA;
-$plugin->release      = '0.5.0-dev';
-$plugin->dependencies = [
-    'local_catquiz'          => 2024120500,
-    'mod_adaptivequiz'       => 2024031502,
-    'local_wunderbyte_table' => 2024040200,
-];
+enum semantic_action: string {
+    case STARTED = 'started';
+    case COMPLETED = 'completed';
+    case DELIVERED = 'delivered';
+    case VIEWED = 'viewed';
+    case INTERACTED = 'interacted';
+    case ABANDONED = 'abandoned';
+    case RESTARTED = 'restarted';
+}

@@ -60,6 +60,9 @@ class attempt_filter {
     /** @var bool Allow cross-course query (requires viewall capability). */
     public readonly bool $systemwide;
 
+    /** @var int[]|null Restrict to these users (null = no user restriction). */
+    public readonly ?array $userids;
+
     /**
      * Constructor – all parameters optional except courseid.
      *
@@ -70,6 +73,7 @@ class attempt_filter {
      * @param int|null $endtime     Unix timestamp upper bound.
      * @param bool     $systemwide  Allow cross-course query.
      * @param int[]|null $instanceids Restrict to several instances (takes precedence over $instanceid when non-empty).
+     * @param int[]|null $userids Restrict to these users (null = all; empty array = none).
      */
     public function __construct(
         int $courseid,
@@ -78,7 +82,8 @@ class attempt_filter {
         ?int $starttime = null,
         ?int $endtime = null,
         bool $systemwide = false,
-        ?array $instanceids = null
+        ?array $instanceids = null,
+        ?array $userids = null
     ) {
         $this->courseid   = $courseid;
         $this->instanceid = $instanceid;
@@ -96,6 +101,7 @@ class attempt_filter {
         } else {
             $this->instanceids = null;
         }
+        $this->userids = $userids === null ? null : array_values(array_unique(array_map('intval', $userids)));
     }
 
     /**

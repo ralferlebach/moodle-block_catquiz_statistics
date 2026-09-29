@@ -14,24 +14,29 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace block_catquiz_statistics\analytics\identity;
+
 /**
- * Plugin version definition for block_catquiz_statistics.
+ * Resolves external identifiers to the canonical internal person identity (userid).
  *
  * @package    block_catquiz_statistics
- * @copyright  2025 Ralf Erlebach
+ * @copyright  2026 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+interface subject_resolver_interface {
+    /**
+     * Resolve a list of external identifiers.
+     *
+     * @param string[] $externalids Raw identifiers from the source.
+     * @param string $matchfield Strategy: userid | idnumber | username | profile_field_<shortname>.
+     * @return resolution_result
+     */
+    public function resolve(array $externalids, string $matchfield): resolution_result;
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component    = 'block_catquiz_statistics';
-$plugin->version      = 2026092900;
-$plugin->requires     = 2024100700;   // Moodle 4.5.
-$plugin->supported    = [405, 405];   // Tested on Moodle 4.5; extend after 5.x testing.
-$plugin->maturity     = MATURITY_ALPHA;
-$plugin->release      = '0.5.0-dev';
-$plugin->dependencies = [
-    'local_catquiz'          => 2024120500,
-    'mod_adaptivequiz'       => 2024031502,
-    'local_wunderbyte_table' => 2024040200,
-];
+    /**
+     * Available match strategies (key => human readable label).
+     *
+     * @return array
+     */
+    public function get_matchfields(): array;
+}

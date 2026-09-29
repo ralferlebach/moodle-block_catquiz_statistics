@@ -14,24 +14,34 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace block_catquiz_statistics\analytics;
+
 /**
- * Plugin version definition for block_catquiz_statistics.
+ * Value types of an observation.
+ *
+ * EVENT marks observations that represent a semantic milestone rather than a
+ * measured value; their "value" is the fact that they occurred.
  *
  * @package    block_catquiz_statistics
- * @copyright  2025 Ralf Erlebach
+ * @copyright  2026 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+enum value_type: string {
+    case NUMERIC = 'numeric';
+    case INTEGER = 'integer';
+    case BOOLEAN = 'boolean';
+    case TEXT = 'string';
+    case DATETIME = 'datetime';
+    case CATEGORICAL = 'categorical';
+    case ORDINAL = 'ordinal';
+    case EVENT = 'event';
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component    = 'block_catquiz_statistics';
-$plugin->version      = 2026092900;
-$plugin->requires     = 2024100700;   // Moodle 4.5.
-$plugin->supported    = [405, 405];   // Tested on Moodle 4.5; extend after 5.x testing.
-$plugin->maturity     = MATURITY_ALPHA;
-$plugin->release      = '0.5.0-dev';
-$plugin->dependencies = [
-    'local_catquiz'          => 2024120500,
-    'mod_adaptivequiz'       => 2024031502,
-    'local_wunderbyte_table' => 2024040200,
-];
+    /**
+     * Whether the value is stored in the numeric column.
+     *
+     * @return bool
+     */
+    public function is_numeric(): bool {
+        return in_array($this, [self::NUMERIC, self::INTEGER, self::DATETIME, self::ORDINAL], true);
+    }
+}

@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="blocks/catquiz_statistics/db" VERSION="20260929" COMMENT="XMLDB file for Moodle blocks/catquiz_statistics"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="block_catquiz_statistics_dataset" COMMENT="Imported or generated datasets. Owned by a course or system context, never by a block instance.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="contextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Owning context (course or system)"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="sourcetype" TYPE="char" LENGTH="30" NOTNULL="true" SEQUENCE="false" COMMENT="csv | questionnaire | feedback | gradebook | activity | synthetic"/>
+        <FIELD NAME="sourcecomponent" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="sourceref" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="Source object reference, e.g. file name or cmid"/>
+        <FIELD NAME="version" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
+        <FIELD NAME="versionof" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Previous dataset this one supersedes"/>
+        <FIELD NAME="matchfield" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false" COMMENT="Identity-resolution strategy used for this dataset"/>
+        <FIELD NAME="provenance" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON: source version, import settings, scoring versions"/>
+        <FIELD NAME="issynthetic" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="contextid" TYPE="foreign" FIELDS="contextid" REFTABLE="context" REFFIELDS="id"/>
+        <KEY NAME="versionof" TYPE="foreign" FIELDS="versionof" REFTABLE="block_catquiz_statistics_dataset" REFFIELDS="id"/>
+        <KEY NAME="usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="block_catquiz_statistics_variable" COMMENT="Variable register. The analytic role is NOT stored here; see evalrole.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="contextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Scope in which the shortname is unique (course or system)"/>
+        <FIELD NAME="shortname" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="label" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="datatype" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="numeric | integer | boolean | string | datetime | categorical | ordinal"/>
+        <FIELD NAME="measurementlevel" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="nominal | ordinal | interval"/>
+        <FIELD NAME="allowedvalues" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON: range or category list"/>
+        <FIELD NAME="missingcodes" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON list of values that denote missing data"/>
+        <FIELD NAME="unit" TYPE="char" LENGTH="50" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="reversecoded" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="source" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="issynthetic" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="contextid" TYPE="foreign" FIELDS="contextid" REFTABLE="context" REFFIELDS="id"/>
+        <KEY NAME="usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="contextid_shortname" UNIQUE="true" FIELDS="contextid, shortname"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="block_catquiz_statistics_observation" COMMENT="Normalised, time-stamped observations that have no other canonical source (imports, surveys).">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="datasetid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="variableid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="sourcecomponent" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="sourcearea" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="sourceitemid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="sourcekey" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Idempotency key: identical source rows never duplicate"/>
+        <FIELD NAME="origincontextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="origincourseid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="occurredat" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="periodstart" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="periodend" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="timepoint" TYPE="char" LENGTH="50" NOTNULL="false" SEQUENCE="false" COMMENT="Measurement occasion label, e.g. T0"/>
+        <FIELD NAME="valuetype" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="valuenumeric" TYPE="number" LENGTH="20" NOTNULL="false" SEQUENCE="false" DECIMALS="8"/>
+        <FIELD NAME="valuetext" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="valuebool" TYPE="int" LENGTH="1" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="30" NOTNULL="true" DEFAULT="observed" SEQUENCE="false" COMMENT="observed | missing_* (explicit missing semantics)"/>
+        <FIELD NAME="provenance" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON: minimal provenance, never raw event payloads"/>
+        <FIELD NAME="sourceversion" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="issynthetic" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="datasetid" TYPE="foreign" FIELDS="datasetid" REFTABLE="block_catquiz_statistics_dataset" REFFIELDS="id"/>
+        <KEY NAME="variableid" TYPE="foreign" FIELDS="variableid" REFTABLE="block_catquiz_statistics_variable" REFFIELDS="id"/>
+        <KEY NAME="origincontextid" TYPE="foreign" FIELDS="origincontextid" REFTABLE="context" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="sourcekey" UNIQUE="true" FIELDS="sourcekey"/>
+        <INDEX NAME="userid_occurredat" UNIQUE="false" FIELDS="userid, occurredat"/>
+        <INDEX NAME="origincourseid" UNIQUE="false" FIELDS="origincourseid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="block_catquiz_statistics_milestone" COMMENT="Semantic milestones (action + object type) derived from technical events. first/last/count per source identity.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="action" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="objecttype" TYPE="char" LENGTH="30" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="sourcecomponent" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="sourceevent" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="sourceitemid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="sourcekey" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Unique source identity of the milestone"/>
+        <FIELD NAME="origincontextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="origincourseid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="firstoccurred" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="lastoccurred" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="occurrences" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
+        <FIELD NAME="attributes" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON: only semantically required attributes"/>
+        <FIELD NAME="issynthetic" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="origincontextid" TYPE="foreign" FIELDS="origincontextid" REFTABLE="context" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="sourcekey" UNIQUE="true" FIELDS="sourcekey"/>
+        <INDEX NAME="userid_firstoccurred" UNIQUE="false" FIELDS="userid, firstoccurred"/>
+        <INDEX NAME="action_objecttype" UNIQUE="false" FIELDS="action, objecttype"/>
+        <INDEX NAME="origincourseid" UNIQUE="false" FIELDS="origincourseid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="block_catquiz_statistics_subjectmap" COMMENT="Auditable identity resolution of external identifiers per dataset.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="datasetid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="externalid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="matchfield" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Null unless status = matched"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="matched | unmatched | ambiguous"/>
+        <FIELD NAME="candidates" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="datasetid" TYPE="foreign" FIELDS="datasetid" REFTABLE="block_catquiz_statistics_dataset" REFFIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="datasetid_externalid" UNIQUE="true" FIELDS="datasetid, externalid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="block_catquiz_statistics_evalmodel" COMMENT="Evaluation model: defines view, population and role mapping. Not the owner of any data point.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="contextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="template" TYPE="char" LENGTH="50" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="version" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
+        <FIELD NAME="config" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON: population, transitions, windows"/>
+        <FIELD NAME="issynthetic" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="contextid" TYPE="foreign" FIELDS="contextid" REFTABLE="context" REFFIELDS="id"/>
+        <KEY NAME="usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="block_catquiz_statistics_evalrole" COMMENT="Model-specific assignment of a data selector to an analytic role.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="modelid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="role" TYPE="char" LENGTH="30" NOTNULL="true" SEQUENCE="false" COMMENT="disposition | exposure | behaviour | performance | outcome | covariate"/>
+        <FIELD NAME="selectortype" TYPE="char" LENGTH="30" NOTNULL="true" SEQUENCE="false" COMMENT="variable | milestone | catquiz | gradeitem"/>
+        <FIELD NAME="selector" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="label" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="modelid" TYPE="foreign" FIELDS="modelid" REFTABLE="block_catquiz_statistics_evalmodel" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="modelid_selector" UNIQUE="true" FIELDS="modelid, selectortype, selector" COMMENT="One role per selector within a model"/>
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>

@@ -165,6 +165,14 @@ class attempt_repository {
             $sql .= ' AND a.instanceid = :instanceid';
             $params['instanceid'] = $filter->instanceid;
         }
+        if ($filter->userids !== null) {
+            if (empty($filter->userids)) {
+                return [];
+            }
+            [$usql, $uparams] = $DB->get_in_or_equal($filter->userids, SQL_PARAMS_NAMED, 'usr');
+            $sql .= ' AND a.userid ' . $usql;
+            $params += $uparams;
+        }
         if ($filter->scaleid !== null) {
             $sql .= ' AND a.scaleid = :scaleid';
             $params['scaleid'] = $filter->scaleid;
@@ -199,6 +207,38 @@ class attempt_repository {
             );
         }
         return $dtos;
+    }
+
+    /**
+     * Resolve the module context of mod_adaptivequiz instances in one query.
+     *
+     * Used by analytics providers to give every data point its origin context
+     * without N+1 lookups. Instances whose course module no longer exists are
+     * absent from the result; callers fall back to the course context.
+     *
+     * @param int[] $instanceids mod_adaptivequiz instance ids.
+     * @return array<int,int> instanceid => module context id.
+     */
+    public function get_module_contextids(array $instanceids): array {
+        global $DB;
+
+        $instanceids = array_values(array_unique(array_filter(array_map('intval', $instanceids))));
+        if (empty($instanceids)) {
+            return [];
+        }
+        [$insql, $params] = $DB->get_in_or_equal($instanceids, SQL_PARAMS_NAMED, 'aqi');
+        $params['modname'] = 'adaptivequiz';
+        $params['level'] = CONTEXT_MODULE;
+        $sql = "SELECT cm.instance, ctx.id AS contextid
+                  FROM {course_modules} cm
+                  JOIN {modules} m ON m.id = cm.module AND m.name = :modname
+                  JOIN {context} ctx ON ctx.instanceid = cm.id AND ctx.contextlevel = :level
+                 WHERE cm.instance $insql";
+        $result = [];
+        foreach ($DB->get_records_sql($sql, $params) as $row) {
+            $result[(int) $row->instance] = (int) $row->contextid;
+        }
+        return $result;
     }
 
     /**

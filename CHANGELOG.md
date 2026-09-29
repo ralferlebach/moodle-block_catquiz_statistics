@@ -6,6 +6,32 @@ versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.5.0-dev] — 2026-09-29
+
+### Added
+- Longitudinales Datenfundament (Issue #2): sieben eigene Tabellen
+  (`dataset`, `variable`, `observation`, `milestone`, `subjectmap`, `evalmodel`, `evalrole`)
+  inkl. `db/upgrade.php`. Datenpunkte gehören nie einer Blockinstanz.
+- Analytische Kerntypen: `analytic_role`, `semantic_action`, `object_type`, `value_type`,
+  `observation_status` (explizite Fehlwert-Semantik), `observation` (DTO), `observation_query`.
+- Provider-/Service-Grenze: `observation_provider_interface`, `catquiz_provider`
+  (liest CATquiz-Versuche, kopiert nichts), `milestone_provider`, `imported_observation_provider`,
+  `analytics_query_service` (kursübergreifende, chronologische Timeline).
+- Hook `collect_observation_providers` als Erweiterungspunkt für spätere Consumer/Adapter.
+- Identity-Resolution (`subject_resolver`): exakt, ohne Fuzzy-Matching, mit Mehrdeutigkeits-
+  und Nicht-Treffer-Ausweis und auditierbarer Speicherung.
+- Evaluationsmodell-Repository: Rollenzuordnung modellbezogen, versioniert.
+- `attempt_filter::$userids`, `attempt_repository::get_module_contextids()`.
+
+### Changed
+- Privacy-Provider auf `plugin\provider` + `core_userlist_provider` erweitert (Export/Löschung).
+- CI: Dependencies versionsabhängig auf die verbindlichen Zielstände gepinnt
+  (4.5: `ALiSe-v-1.2.0-legacy` / adaptivequiz `master`; 5.x: `migration-zu-moodle-5.x` / `v-3.0`);
+  Moodle-5.0-Matrixzeilen durch 5.1 ersetzt.
+- Test-Generator vergibt eindeutige `attemptid` (UNIQUE-Index in aktuellem local_catquiz).
+
+---
+
 ## [Unreleased]
 
 ### Added

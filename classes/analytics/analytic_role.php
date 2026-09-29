@@ -14,24 +14,32 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace block_catquiz_statistics\analytics;
+
 /**
- * Plugin version definition for block_catquiz_statistics.
+ * Analytic roles of the evaluation model.
+ *
+ * Roles are assigned per evaluation model (see evalrole), never stored on a
+ * data point. COVARIATE is orthogonal to the five classes of the effect chain.
  *
  * @package    block_catquiz_statistics
- * @copyright  2025 Ralf Erlebach
+ * @copyright  2026 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+enum analytic_role: string {
+    case DISPOSITION = 'disposition';
+    case EXPOSURE = 'exposure';
+    case BEHAVIOUR = 'behaviour';
+    case PERFORMANCE = 'performance';
+    case OUTCOME = 'outcome';
+    case COVARIATE = 'covariate';
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component    = 'block_catquiz_statistics';
-$plugin->version      = 2026092900;
-$plugin->requires     = 2024100700;   // Moodle 4.5.
-$plugin->supported    = [405, 405];   // Tested on Moodle 4.5; extend after 5.x testing.
-$plugin->maturity     = MATURITY_ALPHA;
-$plugin->release      = '0.5.0-dev';
-$plugin->dependencies = [
-    'local_catquiz'          => 2024120500,
-    'mod_adaptivequiz'       => 2024031502,
-    'local_wunderbyte_table' => 2024040200,
-];
+    /**
+     * The five classes of the effect chain in their canonical order (without covariate).
+     *
+     * @return self[]
+     */
+    public static function chain(): array {
+        return [self::DISPOSITION, self::EXPOSURE, self::BEHAVIOUR, self::PERFORMANCE, self::OUTCOME];
+    }
+}
