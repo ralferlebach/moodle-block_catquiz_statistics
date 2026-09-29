@@ -142,6 +142,80 @@ class access {
 
 
     /**
+     * Whether the current user may see the aggregated learning-analytics dashboard.
+     *
+     * Aggregates only; person-level timelines additionally require {@see self::has_viewdetails()}.
+     *
+     * @param \context $context Course context.
+     * @return bool
+     */
+    public static function has_viewanalytics(\context $context): bool {
+        return has_capability('block/catquiz_statistics:viewanalytics', $context);
+    }
+
+    /**
+     * Whether the current user may configure evaluation models.
+     *
+     * @param \context $context Course context.
+     * @return bool
+     */
+    public static function has_configuremodel(\context $context): bool {
+        return has_capability('block/catquiz_statistics:configuremodel', $context);
+    }
+
+    /**
+     * Require the right to configure evaluation models.
+     *
+     * @param \context $context Course context.
+     * @return void
+     */
+    public static function require_configuremodel(\context $context): void {
+        require_capability('block/catquiz_statistics:configuremodel', $context);
+    }
+
+    /**
+     * Whether the current user may import (and delete) datasets.
+     *
+     * @param \context $context Course context.
+     * @return bool
+     */
+    public static function has_importdata(\context $context): bool {
+        return has_capability('block/catquiz_statistics:importdata', $context);
+    }
+
+    /**
+     * Require the right to import datasets.
+     *
+     * @param \context $context Course context.
+     * @return void
+     */
+    public static function require_importdata(\context $context): void {
+        require_capability('block/catquiz_statistics:importdata', $context);
+    }
+
+    /**
+     * Whether the current user may run and view statistical analyses.
+     *
+     * @param \context $context Course context.
+     * @return bool
+     */
+    public static function has_viewanalyses(\context $context): bool {
+        return has_capability('block/catquiz_statistics:viewanalyses', $context);
+    }
+
+    /**
+     * Whether the current user may manage synthetic demo cohorts.
+     *
+     * Requires the capability in system context AND the site setting enabledemo.
+     *
+     * @return bool
+     */
+    public static function has_managedemo(): bool {
+        return (bool) get_config('block_catquiz_statistics', 'enabledemo')
+            && has_capability('block/catquiz_statistics:managedemo', \context_system::instance());
+    }
+
+    /**
      * Whether the local_catquiz plugin is installed and available.
      *
      * Used by the block to show a graceful "not installed" message instead

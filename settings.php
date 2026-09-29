@@ -63,4 +63,12 @@ if ($ADMIN->fulltree) {
         get_string('setting:enablemoduled_desc', 'block_catquiz_statistics'),
         0
     ));
+
+    // Synthetic demo cohorts (Issue #9): off by default; never enable on production sites.
+    $settings->add(new admin_setting_configcheckbox(
+        'block_catquiz_statistics/enabledemo',
+        get_string('setting:enabledemo', 'block_catquiz_statistics'),
+        get_string('setting:enabledemo_desc', 'block_catquiz_statistics'),
+        0
+    ));
 }

@@ -6,7 +6,7 @@ versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.5.0-dev] — 2026-09-29
+## [0.5.0] — Build 2026092901 (29.09.2026)
 
 ### Added
 - Longitudinales Datenfundament (Issue #2): sieben eigene Tabellen
@@ -22,12 +22,15 @@ versioning follows [Semantic Versioning](https://semver.org/).
   und Nicht-Treffer-Ausweis und auditierbarer Speicherung.
 - Evaluationsmodell-Repository: Rollenzuordnung modellbezogen, versioniert.
 - `attempt_filter::$userids`, `attempt_repository::get_module_contextids()`.
+- Fünf Learning-Analytics-Capabilities: `viewanalytics`, `configuremodel`, `importdata`,
+  `viewanalyses`, `managedemo` (+ Setting `enabledemo`), Guard-Methoden in `access`.
 
 ### Changed
 - Privacy-Provider auf `plugin\provider` + `core_userlist_provider` erweitert (Export/Löschung).
 - CI: Dependencies versionsabhängig auf die verbindlichen Zielstände gepinnt
   (4.5: `ALiSe-v-1.2.0-legacy` / adaptivequiz `master`; 5.x: `migration-zu-moodle-5.x` / `v-3.0`);
-  Moodle-5.0-Matrixzeilen durch 5.1 ersetzt.
+  Moodle-5.0-Matrixzeilen durch 5.1 ersetzt. `catquizcentralhub` wird nicht geladen;
+  leere Submodule-Verzeichnisse von local_catquiz werden entfernt (sonst PHP-Warnungen).
 - Test-Generator vergibt eindeutige `attemptid` (UNIQUE-Index in aktuellem local_catquiz).
 
 ---

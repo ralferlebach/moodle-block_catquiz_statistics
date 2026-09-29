@@ -25,6 +25,14 @@
  *   viewdebug    – see per-attempt trajectories from graphicalsummary/debug_info.
  *   export       – download CSV / JSON / XLSX / ODS exports (RISK_PERSONAL).
  *   viewall      – cross-course, system-wide aggregation (manager only).
+ *
+ * Learning analytics / evaluation model (since 0.5, Issues #3, #7, #9):
+ *
+ *   viewanalytics  – aggregated learning-analytics dashboard (no personal data).
+ *   configuremodel – create and edit evaluation models and role mappings.
+ *   importdata     – import datasets (surveys, demographics, outcomes) (RISK_PERSONAL).
+ *   viewanalyses   – run and view descriptive/regression/path analyses (RISK_PERSONAL).
+ *   managedemo     – generate and reset synthetic demo cohorts (admin only, setting-gated).
  *   addinstance  – place the block on a course page.
  *
  * @package    block_catquiz_statistics
@@ -112,4 +120,51 @@ $capabilities = [
         ],
     ],
 
+    // Aggregated learning-analytics dashboard: cohort overview, transitions, no person-level data.
+    'block/catquiz_statistics:viewanalytics' => [
+        'captype'      => 'read',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes'   => [
+            'teacher'        => CAP_ALLOW,
+            'editingteacher' => CAP_ALLOW,
+            'manager'        => CAP_ALLOW,
+        ],
+    ],
+    // Create/edit evaluation models: population, role mapping, transitions, windows.
+    'block/catquiz_statistics:configuremodel' => [
+        'riskbitmask'  => RISK_CONFIG,
+        'captype'      => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes'   => [
+            'editingteacher' => CAP_ALLOW,
+            'manager'        => CAP_ALLOW,
+        ],
+    ],
+    // Import datasets with potentially highly sensitive personal characteristics; delete datasets.
+    'block/catquiz_statistics:importdata' => [
+        'riskbitmask'  => RISK_PERSONAL | RISK_DATALOSS,
+        'captype'      => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes'   => [
+            'editingteacher' => CAP_ALLOW,
+            'manager'        => CAP_ALLOW,
+        ],
+    ],
+    // Run and view statistical analyses computed on person-level data.
+    'block/catquiz_statistics:viewanalyses' => [
+        'riskbitmask'  => RISK_PERSONAL,
+        'captype'      => 'read',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes'   => [
+            'editingteacher' => CAP_ALLOW,
+            'manager'        => CAP_ALLOW,
+        ],
+    ],
+    // Generate/reset synthetic demo cohorts. No archetype: site admins only; also gated by a setting.
+    'block/catquiz_statistics:managedemo' => [
+        'riskbitmask'  => RISK_CONFIG | RISK_DATALOSS,
+        'captype'      => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes'   => [],
+    ],
 ];
