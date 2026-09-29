@@ -6,7 +6,24 @@ versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.5.0] — Build 2026092901 (29.09.2026)
+## [0.5.0] — Build 2026092902 (29.09.2026)
+
+### Added (Build 2026092902)
+- Messanlass `occasion` in der Rollenzuordnung (any | first | last | attempt:N | tp:<label> | window:<from>-<to>);
+  Unique-Index über Modell + Selektor + Anlass. Wertobjekt `analytics\occasion` mit Auswahlsemantik.
+- Semantische Event-Schicht (Issue #4): `semantic_adapter_interface`, `milestone_spec`, `adapter_registry`,
+  Hook `collect_semantic_adapters`, `observer`, `db/events.php`; Standardadapter für
+  `attempt_completed` (nur Signal), `result_page_viewed` (mod_adaptivequiz#15) und `feedbacktab_clicked`.
+- `semantic_label`: wörtliche UI-Bezeichnungen ohne Überinterpretation.
+- Advanced-Modus: Tabelle `eventmap`, `eventmap_repository`, geplante Aufgabe
+  `materialise_custom_milestones` (Logstore, inkrementell mit Watermark).
+- Settings `disabledadapters`, `enableadvancedmapping`.
+
+### Changed (Build 2026092902)
+- `milestone_repository::merge()` als gemeinsame Operation für Live-Observer und Log-Materialisierung.
+- `evalrole`: `selectortype` 20, `selector` 160 Zeichen (Indexlimit 333 Zeichen).
+
+### Build 2026092901
 
 ### Added
 - Longitudinales Datenfundament (Issue #2): sieben eigene Tabellen

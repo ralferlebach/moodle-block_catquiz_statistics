@@ -56,6 +56,9 @@ class provider implements
     /** @var string Dataset table. */
     private const T_DS = 'block_catquiz_statistics_dataset';
 
+    /** @var string Event map table (system level, authorship only). */
+    private const T_EVMAP = 'block_catquiz_statistics_eventmap';
+
     /** @var string[] Tables with a usermodified authorship column and a contextid. */
     private const AUTHORED = [
         'block_catquiz_statistics_dataset',
@@ -96,7 +99,7 @@ class provider implements
             'status' => 'privacy:metadata:subjectmap:status',
         ], 'privacy:metadata:subjectmap');
 
-        foreach (self::AUTHORED as $table) {
+        foreach (array_merge(self::AUTHORED, [self::T_EVMAP]) as $table) {
             $collection->add_database_table($table, [
                 'usermodified' => 'privacy:metadata:authored:usermodified',
             ], 'privacy:metadata:authored');
@@ -151,6 +154,12 @@ class provider implements
         foreach (self::AUTHORED as $table) {
             $contextlist->add_from_sql('SELECT contextid FROM {' . $table . '} WHERE usermodified = :userid', $params);
         }
+        $contextlist->add_from_sql(
+            'SELECT ctx.id FROM {context} ctx
+              WHERE ctx.contextlevel = :syslevel
+                AND EXISTS (SELECT 1 FROM {' . self::T_EVMAP . '} em WHERE em.usermodified = :userid)',
+            $params + ['syslevel' => CONTEXT_SYSTEM]
+        );
         return $contextlist;
     }
 
@@ -176,6 +185,9 @@ class provider implements
                 'SELECT usermodified FROM {' . $table . '} WHERE contextid = :contextid',
                 $params
             );
+        }
+        if ($userlist->get_context()->contextlevel == CONTEXT_SYSTEM) {
+            $userlist->add_from_sql('usermodified', 'SELECT usermodified FROM {' . self::T_EVMAP . '}', []);
         }
     }
 
@@ -276,6 +288,9 @@ class provider implements
         foreach (self::AUTHORED as $table) {
             $DB->set_field($table, 'usermodified', 0, ['contextid' => $context->id]);
         }
+        if ($context->contextlevel == CONTEXT_SYSTEM) {
+            $DB->set_field(self::T_EVMAP, 'usermodified', 0);
+        }
     }
 
     /**
@@ -322,6 +337,9 @@ class provider implements
         );
         foreach (self::AUTHORED as $table) {
             $DB->set_field_select($table, 'usermodified', 0, "contextid = :contextid AND usermodified $insql", $params);
+        }
+        if ($context->contextlevel == CONTEXT_SYSTEM) {
+            $DB->set_field_select(self::T_EVMAP, 'usermodified', 0, "usermodified $insql", $params);
         }
     }
 }

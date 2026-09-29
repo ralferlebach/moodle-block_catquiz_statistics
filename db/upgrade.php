@@ -55,5 +55,44 @@ function xmldb_block_catquiz_statistics_upgrade($oldversion) {
         upgrade_block_savepoint(true, 2026092900, 'catquiz_statistics');
     }
 
+    if ($oldversion < 2026092902) {
+        // Rollenzuordnung: Messanlass (occasion) als Teil der Selektor-Identität,
+        // damit z. B. Baseline (first) und Re-Test (last) derselben Skala in einem
+        // Modell unterschiedliche Rollen erhalten können. Feldlängen gekürzt, damit
+        // der zusammengesetzte Unique-Index Moodles Limit (333 Zeichen) einhält.
+        $table = new xmldb_table('block_catquiz_statistics_evalrole');
+        $oldindex = new xmldb_index('modelid_selector', XMLDB_INDEX_UNIQUE, ['modelid', 'selectortype', 'selector']);
+        if ($dbman->index_exists($table, $oldindex)) {
+            $dbman->drop_index($table, $oldindex);
+        }
+        $dbman->change_field_precision(
+            $table,
+            new xmldb_field('selectortype', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, null, 'role')
+        );
+        $dbman->change_field_precision(
+            $table,
+            new xmldb_field('selector', XMLDB_TYPE_CHAR, '160', null, XMLDB_NOTNULL, null, null, 'selectortype')
+        );
+        $field = new xmldb_field('occasion', XMLDB_TYPE_CHAR, '80', null, XMLDB_NOTNULL, null, 'any', 'selector');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $newindex = new xmldb_index(
+            'modelid_selector_occasion',
+            XMLDB_INDEX_UNIQUE,
+            ['modelid', 'selectortype', 'selector', 'occasion']
+        );
+        if (!$dbman->index_exists($table, $newindex)) {
+            $dbman->add_index($table, $newindex);
+        }
+
+        // Advanced-Modus der semantischen Event-Schicht (Issue #4).
+        if (!$dbman->table_exists('block_catquiz_statistics_eventmap')) {
+            $dbman->install_one_table_from_xmldb_file(__DIR__ . '/install.xml', 'block_catquiz_statistics_eventmap');
+        }
+
+        upgrade_block_savepoint(true, 2026092902, 'catquiz_statistics');
+    }
+
     return true;
 }

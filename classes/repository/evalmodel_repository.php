@@ -17,12 +17,16 @@
 namespace block_catquiz_statistics\repository;
 
 use block_catquiz_statistics\analytics\analytic_role;
+use block_catquiz_statistics\analytics\occasion;
 
 /**
  * Persistence of evaluation models and their role mappings.
  *
  * The analytic role of a data selector is a property of the model, not of the
  * data point: the same variable can play different roles in different models.
+ * Within one model, selector + occasion identifies a mapping uniquely, so the
+ * same variable can appear at several measurement occasions (e.g. baseline and
+ * re-test) but never twice at the same occasion.
  * Every change to the role mapping increments the model version.
  *
  * @package    block_catquiz_statistics
@@ -94,16 +98,18 @@ class evalmodel_repository {
      * @param analytic_role $role Role.
      * @param string $selectortype One of self::SELECTORTYPES.
      * @param string $selector Selector, e.g. a variable key.
+     * @param string $occasion Measurement occasion, see {@see occasion}; '' or 'any' = any.
      * @param string|null $label Display label.
      * @param int $sortorder Order within the role.
      * @return int Role mapping id.
-     * @throws \coding_exception On invalid selector type.
+     * @throws \coding_exception On invalid selector type or occasion.
      */
     public function assign_role(
         int $modelid,
         analytic_role $role,
         string $selectortype,
         string $selector,
+        string $occasion = '',
         ?string $label = null,
         int $sortorder = 0
     ): int {
@@ -112,8 +118,9 @@ class evalmodel_repository {
         if (!in_array($selectortype, self::SELECTORTYPES, true)) {
             throw new \coding_exception('Invalid selector type: ' . $selectortype);
         }
+        $occasion = occasion::from_string($occasion)->to_string();
         $existing = $DB->get_record(self::TABLE_ROLE, [
-            'modelid' => $modelid, 'selectortype' => $selectortype, 'selector' => $selector,
+            'modelid' => $modelid, 'selectortype' => $selectortype, 'selector' => $selector, 'occasion' => $occasion,
         ]);
         if ($existing) {
             $existing->role = $role->value;
@@ -127,6 +134,7 @@ class evalmodel_repository {
                 'role' => $role->value,
                 'selectortype' => $selectortype,
                 'selector' => $selector,
+                'occasion' => $occasion,
                 'label' => $label,
                 'sortorder' => $sortorder,
                 'timecreated' => time(),
@@ -142,10 +150,14 @@ class evalmodel_repository {
      * @param int $modelid Model id.
      * @param string $selectortype Selector type.
      * @param string $selector Selector.
+     * @param string $occasion Measurement occasion.
      */
-    public function unassign(int $modelid, string $selectortype, string $selector): void {
+    public function unassign(int $modelid, string $selectortype, string $selector, string $occasion = ''): void {
         global $DB;
-        $DB->delete_records(self::TABLE_ROLE, ['modelid' => $modelid, 'selectortype' => $selectortype, 'selector' => $selector]);
+        $DB->delete_records(self::TABLE_ROLE, [
+            'modelid' => $modelid, 'selectortype' => $selectortype, 'selector' => $selector,
+            'occasion' => occasion::from_string($occasion)->to_string(),
+        ]);
         $this->bump_version($modelid);
     }
 
@@ -153,13 +165,14 @@ class evalmodel_repository {
      * Role mappings of a model, ordered by role chain and sort order.
      *
      * @param int $modelid Model id.
-     * @return \stdClass[] Rows with an additional 'roleenum' property.
+     * @return \stdClass[] Rows with additional 'roleenum' and 'occasionobj' properties.
      */
     public function get_roles(int $modelid): array {
         global $DB;
         $rows = $DB->get_records(self::TABLE_ROLE, ['modelid' => $modelid], 'sortorder, id');
         foreach ($rows as $row) {
             $row->roleenum = analytic_role::from($row->role);
+            $row->occasionobj = occasion::from_string((string) $row->occasion);
         }
         return $rows;
     }
@@ -170,12 +183,14 @@ class evalmodel_repository {
      * @param int $modelid Model id.
      * @param string $selectortype Selector type.
      * @param string $selector Selector.
+     * @param string $occasion Measurement occasion.
      * @return analytic_role|null
      */
-    public function get_role_of(int $modelid, string $selectortype, string $selector): ?analytic_role {
+    public function get_role_of(int $modelid, string $selectortype, string $selector, string $occasion = ''): ?analytic_role {
         global $DB;
         $role = $DB->get_field(self::TABLE_ROLE, 'role', [
             'modelid' => $modelid, 'selectortype' => $selectortype, 'selector' => $selector,
+            'occasion' => occasion::from_string($occasion)->to_string(),
         ]);
         return $role ? analytic_role::from($role) : null;
     }

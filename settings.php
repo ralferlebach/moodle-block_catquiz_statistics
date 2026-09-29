@@ -64,6 +64,27 @@ if ($ADMIN->fulltree) {
         0
     ));
 
+    // Semantic event layer (Issue #4): standard adapters can be switched off individually.
+    $adapterchoices = [];
+    foreach (\block_catquiz_statistics\analytics\semantic\adapter_registry::get_standard_adapters() as $adapter) {
+        $adapterchoices[$adapter->get_key()] = \block_catquiz_statistics\analytics\semantic\semantic_label::for_adapter($adapter);
+    }
+    $settings->add(new admin_setting_configmulticheckbox(
+        'block_catquiz_statistics/disabledadapters',
+        get_string('setting:disabledadapters', 'block_catquiz_statistics'),
+        get_string('setting:disabledadapters_desc', 'block_catquiz_statistics'),
+        [],
+        $adapterchoices
+    ));
+
+    // Advanced mode: admin-defined event mappings, materialised from the log store.
+    $settings->add(new admin_setting_configcheckbox(
+        'block_catquiz_statistics/enableadvancedmapping',
+        get_string('setting:enableadvancedmapping', 'block_catquiz_statistics'),
+        get_string('setting:enableadvancedmapping_desc', 'block_catquiz_statistics'),
+        0
+    ));
+
     // Synthetic demo cohorts (Issue #9): off by default; never enable on production sites.
     $settings->add(new admin_setting_configcheckbox(
         'block_catquiz_statistics/enabledemo',

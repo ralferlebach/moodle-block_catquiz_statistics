@@ -19,6 +19,7 @@ namespace block_catquiz_statistics\repository;
 use block_catquiz_statistics\analytics\object_type;
 use block_catquiz_statistics\analytics\observation;
 use block_catquiz_statistics\analytics\observation_query;
+use block_catquiz_statistics\analytics\semantic\milestone_spec;
 use block_catquiz_statistics\analytics\semantic_action;
 use block_catquiz_statistics\analytics\value_type;
 
@@ -38,7 +39,7 @@ class milestone_repository {
     public const TABLE = 'block_catquiz_statistics_milestone';
 
     /**
-     * Record an occurrence of a semantic milestone.
+     * Record one occurrence of a semantic milestone.
      *
      * @param int $userid User.
      * @param semantic_action $action Semantic action.
@@ -68,6 +69,84 @@ class milestone_repository {
         array $attributes = [],
         bool $issynthetic = false
     ): \stdClass {
+        return $this->merge(
+            $userid,
+            $action,
+            $objecttype,
+            $sourcecomponent,
+            $sourceevent,
+            $sourcekey,
+            $origincontextid,
+            $occurredat,
+            $occurredat,
+            1,
+            $origincourseid,
+            $sourceitemid,
+            $attributes,
+            $issynthetic
+        );
+    }
+
+    /**
+     * Record one occurrence described by an adapter result.
+     *
+     * @param milestone_spec $spec Mapped milestone.
+     * @return \stdClass The stored milestone row.
+     */
+    public function record_spec(milestone_spec $spec): \stdClass {
+        return $this->record(
+            userid: $spec->userid,
+            action: $spec->action,
+            objecttype: $spec->objecttype,
+            sourcecomponent: $spec->sourcecomponent,
+            sourceevent: $spec->sourceevent,
+            sourcekey: $spec->sourcekey,
+            origincontextid: $spec->origincontextid,
+            occurredat: $spec->occurredat,
+            origincourseid: $spec->origincourseid,
+            sourceitemid: $spec->sourceitemid,
+            attributes: $spec->attributes,
+        );
+    }
+
+    /**
+     * Merge an aggregate of occurrences (first, last, count) into a milestone.
+     *
+     * Used by live observers (count = 1) and by incremental log materialisation.
+     * Callers must guarantee each technical occurrence is merged only once.
+     *
+     * @param int $userid User.
+     * @param semantic_action $action Semantic action.
+     * @param object_type $objecttype Object type.
+     * @param string $sourcecomponent Source component.
+     * @param string $sourceevent Technical source event.
+     * @param string $sourcekey Unique source identity.
+     * @param int $origincontextid Origin context.
+     * @param int $first Earliest occurrence in this aggregate.
+     * @param int $last Latest occurrence in this aggregate.
+     * @param int $count Number of occurrences in this aggregate.
+     * @param int|null $origincourseid Origin course.
+     * @param int|null $sourceitemid Source object id.
+     * @param array $attributes Attributes (only stored on creation).
+     * @param bool $issynthetic Synthetic demo data flag.
+     * @return \stdClass The stored milestone row.
+     */
+    public function merge(
+        int $userid,
+        semantic_action $action,
+        object_type $objecttype,
+        string $sourcecomponent,
+        string $sourceevent,
+        string $sourcekey,
+        int $origincontextid,
+        int $first,
+        int $last,
+        int $count,
+        ?int $origincourseid = null,
+        ?int $sourceitemid = null,
+        array $attributes = [],
+        bool $issynthetic = false
+    ): \stdClass {
         global $DB;
 
         $now = time();
@@ -83,9 +162,9 @@ class milestone_repository {
                 'sourcekey' => $sourcekey,
                 'origincontextid' => $origincontextid,
                 'origincourseid' => $origincourseid,
-                'firstoccurred' => $occurredat,
-                'lastoccurred' => $occurredat,
-                'occurrences' => 1,
+                'firstoccurred' => $first,
+                'lastoccurred' => $last,
+                'occurrences' => $count,
                 'attributes' => empty($attributes) ? null : json_encode($attributes),
                 'issynthetic' => (int) $issynthetic,
                 'timecreated' => $now,
@@ -100,9 +179,9 @@ class milestone_repository {
             }
         }
 
-        $existing->firstoccurred = min((int) $existing->firstoccurred, $occurredat);
-        $existing->lastoccurred = max((int) $existing->lastoccurred, $occurredat);
-        $existing->occurrences = (int) $existing->occurrences + 1;
+        $existing->firstoccurred = min((int) $existing->firstoccurred, $first);
+        $existing->lastoccurred = max((int) $existing->lastoccurred, $last);
+        $existing->occurrences = (int) $existing->occurrences + $count;
         $existing->timemodified = $now;
         $DB->update_record(self::TABLE, $existing);
         return $existing;

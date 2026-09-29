@@ -174,8 +174,9 @@
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="modelid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="role" TYPE="char" LENGTH="30" NOTNULL="true" SEQUENCE="false" COMMENT="disposition | exposure | behaviour | performance | outcome | covariate"/>
-        <FIELD NAME="selectortype" TYPE="char" LENGTH="30" NOTNULL="true" SEQUENCE="false" COMMENT="variable | milestone | catquiz | gradeitem"/>
-        <FIELD NAME="selector" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="selectortype" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="variable | milestone | catquiz | gradeitem | activity"/>
+        <FIELD NAME="selector" TYPE="char" LENGTH="160" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="occasion" TYPE="char" LENGTH="80" NOTNULL="true" DEFAULT="any" SEQUENCE="false" COMMENT="Measurement occasion: any | first | last | attempt:N | tp:T0 | window:FROM-TO"/>
         <FIELD NAME="label" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
@@ -185,7 +186,28 @@
         <KEY NAME="modelid" TYPE="foreign" FIELDS="modelid" REFTABLE="block_catquiz_statistics_evalmodel" REFFIELDS="id"/>
       </KEYS>
       <INDEXES>
-        <INDEX NAME="modelid_selector" UNIQUE="true" FIELDS="modelid, selectortype, selector" COMMENT="One role per selector within a model"/>
+        <INDEX NAME="modelid_selector_occasion" UNIQUE="true" FIELDS="modelid, selectortype, selector, occasion" COMMENT="One role per selector and occasion within a model"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="block_catquiz_statistics_eventmap" COMMENT="Advanced mode: admin-defined mapping of a Moodle event to a semantic milestone, materialised from the log store.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="eventname" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="action" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="objecttype" TYPE="char" LENGTH="30" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="0 = all courses"/>
+        <FIELD NAME="enabled" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
+        <FIELD NAME="lastlogid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Watermark: highest log id already materialised for this mapping"/>
+        <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="eventname_courseid" UNIQUE="true" FIELDS="eventname, courseid"/>
       </INDEXES>
     </TABLE>
   </TABLES>
