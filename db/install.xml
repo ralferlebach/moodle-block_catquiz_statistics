@@ -16,6 +16,7 @@
         <FIELD NAME="version" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
         <FIELD NAME="versionof" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Previous dataset this one supersedes"/>
         <FIELD NAME="matchfield" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false" COMMENT="Identity-resolution strategy used for this dataset"/>
+        <FIELD NAME="importhash" TYPE="char" LENGTH="40" NOTNULL="false" SEQUENCE="false" COMMENT="SHA1 of context, source content and import settings: detects identical re-imports"/>
         <FIELD NAME="provenance" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON: source version, import settings, scoring versions"/>
         <FIELD NAME="issynthetic" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
         <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
@@ -28,6 +29,9 @@
         <KEY NAME="versionof" TYPE="foreign" FIELDS="versionof" REFTABLE="block_catquiz_statistics_dataset" REFFIELDS="id"/>
         <KEY NAME="usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id"/>
       </KEYS>
+      <INDEXES>
+        <INDEX NAME="importhash" UNIQUE="false" FIELDS="importhash"/>
+      </INDEXES>
     </TABLE>
     <TABLE NAME="block_catquiz_statistics_variable" COMMENT="Variable register. The analytic role is NOT stored here; see evalrole.">
       <FIELDS>
@@ -63,6 +67,7 @@
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="datasetid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="variableid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="constructid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Set for derived construct scores"/>
         <FIELD NAME="sourcecomponent" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="sourcearea" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="sourceitemid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
@@ -89,6 +94,7 @@
         <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
         <KEY NAME="datasetid" TYPE="foreign" FIELDS="datasetid" REFTABLE="block_catquiz_statistics_dataset" REFFIELDS="id"/>
         <KEY NAME="variableid" TYPE="foreign" FIELDS="variableid" REFTABLE="block_catquiz_statistics_variable" REFFIELDS="id"/>
+        <KEY NAME="constructid" TYPE="foreign" FIELDS="constructid" REFTABLE="block_catquiz_statistics_construct" REFFIELDS="id"/>
         <KEY NAME="origincontextid" TYPE="foreign" FIELDS="origincontextid" REFTABLE="context" REFFIELDS="id"/>
       </KEYS>
       <INDEXES>
@@ -208,6 +214,80 @@
       </KEYS>
       <INDEXES>
         <INDEX NAME="eventname_courseid" UNIQUE="true" FIELDS="eventname, courseid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="block_catquiz_statistics_construct" COMMENT="Construct/subscale register with a validated scoring rule. Versioned.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="contextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="shortname" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="label" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="instrument" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="parentid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Parent construct for subscales"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="aggregation" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="mean" SEQUENCE="false" COMMENT="mean | sum (prorated) | weightedmean"/>
+        <FIELD NAME="minvaliditems" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
+        <FIELD NAME="version" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false"/>
+        <FIELD NAME="issynthetic" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="contextid" TYPE="foreign" FIELDS="contextid" REFTABLE="context" REFFIELDS="id"/>
+        <KEY NAME="parentid" TYPE="foreign" FIELDS="parentid" REFTABLE="block_catquiz_statistics_construct" REFFIELDS="id"/>
+        <KEY NAME="usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="contextid_shortname" UNIQUE="true" FIELDS="contextid, shortname"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="block_catquiz_statistics_citem" COMMENT="Items (variables) of a construct with reverse-coding and weight.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="constructid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="variableid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="reversecoded" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="weight" TYPE="number" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false" DECIMALS="4"/>
+        <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="constructid" TYPE="foreign" FIELDS="constructid" REFTABLE="block_catquiz_statistics_construct" REFFIELDS="id"/>
+        <KEY NAME="variableid" TYPE="foreign" FIELDS="variableid" REFTABLE="block_catquiz_statistics_variable" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="constructid_variableid" UNIQUE="true" FIELDS="constructid, variableid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="block_catquiz_statistics_outcome" COMMENT="Outcome definitions (configuration only). Values are read live from gradebook/activities, never replicated.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="contextid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Context the definition is configured in"/>
+        <FIELD NAME="shortname" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="label" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="sourcetype" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="gradeitem | activity"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Source course (may differ from the configuring course)"/>
+        <FIELD NAME="itemid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="grade_items.id or course_modules.id"/>
+        <FIELD NAME="outcomesignal" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="grade | passfail | gradepresent | attempt | submission | completion"/>
+        <FIELD NAME="valuemode" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="value" SEQUENCE="false" COMMENT="value | indicator | date"/>
+        <FIELD NAME="gradevalue" TYPE="char" LENGTH="10" NOTNULL="true" DEFAULT="final" SEQUENCE="false" COMMENT="final | raw"/>
+        <FIELD NAME="passthreshold" TYPE="number" LENGTH="20" NOTNULL="false" SEQUENCE="false" DECIMALS="5"/>
+        <FIELD NAME="usegradepass" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="absence" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="norecord" SEQUENCE="false" COMMENT="norecord | notparticipated | unknown | false"/>
+        <FIELD NAME="timepoint" TYPE="char" LENGTH="50" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="contextid" TYPE="foreign" FIELDS="contextid" REFTABLE="context" REFFIELDS="id"/>
+        <KEY NAME="usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="contextid_shortname" UNIQUE="true" FIELDS="contextid, shortname"/>
       </INDEXES>
     </TABLE>
   </TABLES>

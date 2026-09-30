@@ -6,7 +6,58 @@ versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.5.0] — Build 2026092902 (29.09.2026)
+## [0.5.0] — Build 2026093003 (30.09.2026)
+
+### Added (Build 2026093003) — Issue #6, Outcome-Adapter
+- Tabelle `outcome` (nur Definitionen; Werte werden live gelesen, keine Replikation von Gradebook-Daten).
+- `outcome_repository`: Quelle Gradebook-Item (Signale grade | passfail | gradepresent) oder Aktivität
+  (attempt: quiz/adaptivequiz · submission: assign · completion · grade); Wertmodus value | indicator | date
+  (Zeitpunkt als Datum = time-to-event); raw/final grade; pass/fail nur mit expliziter Regel
+  (Schwelle oder Bestehensgrenze des Items); Abwesenheits-Semantik norecord (Standard) | notparticipated | unknown | false.
+- `outcome_provider` (Variablenschlüssel `outcome:<id>`): Population = Abfrage-Nutzer oder bewertbare Nutzer des
+  Quellkurses; Zeile ohne Note → missing_notgraded; ausgeschlossene Note → not_applicable; Provenienz des Quellkurses
+  bleibt auch bei kursübergreifenden Outcomes erhalten.
+- `data_quality::for_outcome()`: N, Missing nach Grund, Zeit-/Wertebereich, Kategorien, grademin/grademax/gradepass.
+- Selektortypen `outcome` und `construct` im Evaluationsmodell.
+- Externe Outcomes über den bestehenden CSV-Import (inkl. Messzeitpunkt und Datumsspalte).
+
+### Build 2026093002 (30.09.2026)
+
+### Added (Build 2026093002) — Issue #3, Befragungsquellen
+- `import\survey\survey_source_interface` mit Adaptern `questionnaire_source` (mod_questionnaire) und
+  `feedback_source` (mod_feedback); `import\survey_importer`.
+- Questionnaire: Rate-Fragen → ein ordinales Item je Zeile (1-basiert bzw. benannte Stufen; N/A = -1 → Missing),
+  Radio/Dropdown → kategorial, Ja/Nein → boolesch, Zahl, Text, Datum; nur vollständige Antworten;
+  gelöschte Fragen werden übersprungen (alte 'y'/'n'- und neue Zeitstempel-Kennzeichnung).
+- Feedback: bewertete Mehrfachauswahl → Gewicht der gewählten Option, Einfachauswahl → Optionstext,
+  Zahl, Text; „nicht ausgewählt“ → Missing; Layout- und Mehrfachantwort-Items werden nicht importiert.
+- Anonyme Befragungen werden grundsätzlich nicht personenbezogen importiert.
+- Re-Import: identische Antworten → bestehender Datensatz; geänderte Antworten → neue Version, die die alte ablöst;
+  je Person zählt die letzte vollständige Abgabe; optionale Zuordnung zu bestehenden Registervariablen (`variablemap`).
+- CI: mod_questionnaire (MOODLE_404_STABLE) in der 4.5-Linie.
+
+### Build 2026093001 (30.09.2026)
+
+### Added (Build 2026093001) — Issue #3, Service-Schicht
+- Konstrukteregister: Tabellen `construct` (Instrument, Subskala via `parentid`, Aggregation mean | sum (prorated) |
+  weightedmean, Mindestanzahl gültiger Items, Version) und `citem` (Item, Reverse-Coding, Gewicht).
+- CSV-Import (`import\csv_table`, `import\value_parser`, `import\csv_importer`): Trennzeichen-/Encoding-/BOM-Erkennung,
+  Dezimalkomma, Typ-/Messniveau-Vorschlag (überschreibbar), Preview mit matched/unmatched/ambiguous,
+  Export unaufgelöster Zeilen, Mehrfachtreffer stoppen den Import, Missing-Codes (global/je Variable),
+  ungültige Werte bleiben als INVALID erhalten, Duplikatzeilen, idempotent über Import-Hash,
+  Korrektur-/Versionsimporte (überholte Versionen werden in Abfragen ausgeblendet).
+- Konstrukt-Scoring (`import\construct_scorer`) mit vollständiger Provenienz; Datenqualität (`import\data_quality`).
+- Status `missing_coded`, `missing_insufficient`, `invalid`; Variablenschlüssel `construct:<id>`.
+
+### Build 2026093000 (30.09.2026)
+
+### Fixed (Build 2026093000)
+- Upgrade von 0.4.x brach mit `ddldependencyerror` ab: Schritt 2026092900 legt die Tabellen aus der
+  aktuellen install.xml an (bereits mit `occasion` und neuem Index), Schritt 2026092902 änderte danach
+  Spaltenlängen unter einem bestehenden Index. Schritt 2026092902 entfernt nun beide möglichen Indizes
+  vor der Längenänderung und ist re-entrant (auch für Sites, die im fehlgeschlagenen Zustand hängen).
+
+### Build 2026092902 (29.09.2026)
 
 ### Added (Build 2026092902)
 - Messanlass `occasion` in der Rollenzuordnung (any | first | last | attempt:N | tp:<label> | window:<from>-<to>);

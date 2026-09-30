@@ -36,6 +36,13 @@ class observation_repository {
     /** @var string Table name. */
     public const TABLE = 'block_catquiz_statistics_observation';
 
+    /** @var string Base SELECT incl. variable and construct labels. */
+    private const SELECT = "SELECT o.*, v.shortname AS variableshortname, v.label AS variablelabel,
+                                   c.shortname AS constructshortname, c.label AS constructlabel
+                              FROM {block_catquiz_statistics_observation} o
+                         LEFT JOIN {block_catquiz_statistics_variable} v ON v.id = o.variableid
+                         LEFT JOIN {block_catquiz_statistics_construct} c ON c.id = o.constructid";
+
     /**
      * Insert or update an observation identified by its source key (idempotent).
      *
@@ -50,6 +57,7 @@ class observation_repository {
             'userid' => $obs->userid,
             'datasetid' => $obs->datasetid,
             'variableid' => $obs->variableid,
+            'constructid' => $obs->constructid,
             'sourcecomponent' => $obs->sourcecomponent,
             'sourcearea' => $obs->sourcearea,
             'sourceitemid' => $obs->sourceitemid,
@@ -90,16 +98,12 @@ class observation_repository {
     public function find(observation_query $query): array {
         global $DB;
 
-        if ($query->excludes_prefix('var:')) {
+        if ($query->excludes_prefix('var:') && $query->excludes_prefix('construct:')) {
             return [];
         }
 
         [$where, $params] = $this->build_where($query);
-        $sql = "SELECT o.*, v.shortname AS variableshortname, v.label AS variablelabel
-                  FROM {" . self::TABLE . "} o
-             LEFT JOIN {block_catquiz_statistics_variable} v ON v.id = o.variableid
-                 WHERE $where
-              ORDER BY o.userid, o.occurredat, o.id";
+        $sql = self::SELECT . " WHERE $where ORDER BY o.userid, o.occurredat, o.id";
 
         $result = [];
         foreach ($DB->get_records_sql($sql, $params) as $record) {
@@ -109,6 +113,44 @@ class observation_repository {
             }
         }
         return $result;
+    }
+
+    /**
+     * Observations of one dataset (incl. superseded datasets), optionally restricted.
+     *
+     * @param int $datasetid Dataset id.
+     * @param int[]|null $variableids Restrict to these register variables.
+     * @param bool $constructs True: only construct scores; false: only raw variables.
+     * @return observation[]
+     */
+    public function find_for_dataset(int $datasetid, ?array $variableids = null, bool $constructs = false): array {
+        global $DB;
+
+        $where = 'o.datasetid = :dsid AND ' . ($constructs ? 'o.constructid IS NOT NULL' : 'o.variableid IS NOT NULL');
+        $params = ['dsid' => $datasetid];
+        if ($variableids !== null) {
+            if (empty($variableids)) {
+                return [];
+            }
+            [$insql, $inparams] = $DB->get_in_or_equal($variableids, SQL_PARAMS_NAMED, 'fv');
+            $where .= ' AND o.variableid ' . $insql;
+            $params += $inparams;
+        }
+        return array_map(
+            fn($r) => $this->to_observation($r),
+            array_values($DB->get_records_sql(self::SELECT . " WHERE $where ORDER BY o.userid, o.id", $params))
+        );
+    }
+
+    /**
+     * Delete the derived scores of a construct within a dataset.
+     *
+     * @param int $constructid Construct id.
+     * @param int $datasetid Dataset id.
+     */
+    public function delete_construct_scores(int $constructid, int $datasetid): void {
+        global $DB;
+        $DB->delete_records(self::TABLE, ['constructid' => $constructid, 'datasetid' => $datasetid]);
     }
 
     /**
@@ -130,7 +172,9 @@ class observation_repository {
     private function build_where(observation_query $query): array {
         global $DB;
 
-        $where = ['1=1'];
+        // Superseded dataset versions (a newer one has versionof = id) are never returned.
+        $where = ['(o.datasetid IS NULL OR NOT EXISTS (
+                     SELECT 1 FROM {block_catquiz_statistics_dataset} dn WHERE dn.versionof = o.datasetid))'];
         $params = [];
         if ($query->userids !== null) {
             if (empty($query->userids)) {
@@ -172,7 +216,8 @@ class observation_repository {
     private function to_observation(\stdClass $r): observation {
         return new observation(
             userid: (int) $r->userid,
-            variablekey: $r->variableid ? 'var:' . (int) $r->variableid : 'var:unregistered',
+            variablekey: $r->constructid ? 'construct:' . (int) $r->constructid
+                : ($r->variableid ? 'var:' . (int) $r->variableid : 'var:unregistered'),
             sourcecomponent: $r->sourcecomponent,
             sourcearea: $r->sourcearea,
             sourcekey: $r->sourcekey,
@@ -188,10 +233,11 @@ class observation_repository {
             valuenumeric: $r->valuenumeric === null ? null : (float) $r->valuenumeric,
             valuetext: $r->valuetext,
             valuebool: $r->valuebool === null ? null : (bool) $r->valuebool,
-            label: $r->variablelabel ?? null,
+            label: $r->constructlabel ?? $r->variablelabel ?? null,
             datasetid: $r->datasetid === null ? null : (int) $r->datasetid,
             variableid: $r->variableid === null ? null : (int) $r->variableid,
-            attributes: ['shortname' => $r->variableshortname ?? null],
+            constructid: $r->constructid === null ? null : (int) $r->constructid,
+            attributes: ['shortname' => $r->constructshortname ?? $r->variableshortname ?? null],
             provenance: $r->provenance ? (json_decode($r->provenance, true) ?: []) : [],
             issynthetic: (bool) $r->issynthetic,
         );

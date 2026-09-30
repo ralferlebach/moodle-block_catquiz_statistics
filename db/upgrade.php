@@ -45,6 +45,9 @@ function xmldb_block_catquiz_statistics_upgrade($oldversion) {
             'block_catquiz_statistics_subjectmap',
             'block_catquiz_statistics_evalmodel',
             'block_catquiz_statistics_evalrole',
+            'block_catquiz_statistics_construct',
+            'block_catquiz_statistics_citem',
+            'block_catquiz_statistics_outcome',
         ];
         foreach ($tables as $tablename) {
             if (!$dbman->table_exists($tablename)) {
@@ -60,10 +63,22 @@ function xmldb_block_catquiz_statistics_upgrade($oldversion) {
         // damit z. B. Baseline (first) und Re-Test (last) derselben Skala in einem
         // Modell unterschiedliche Rollen erhalten können. Feldlängen gekürzt, damit
         // der zusammengesetzte Unique-Index Moodles Limit (333 Zeichen) einhält.
+        //
+        // Der Schritt ist re-entrant: Kommt eine Site von 0.4.x, hat Schritt 2026092900
+        // die Tabelle bereits aus der aktuellen install.xml angelegt (mit occasion und
+        // neuem Index). Spaltenlängen lassen sich nur ohne abhängigen Index ändern,
+        // daher werden BEIDE möglichen Indizes vorher entfernt und danach neu angelegt.
         $table = new xmldb_table('block_catquiz_statistics_evalrole');
         $oldindex = new xmldb_index('modelid_selector', XMLDB_INDEX_UNIQUE, ['modelid', 'selectortype', 'selector']);
-        if ($dbman->index_exists($table, $oldindex)) {
-            $dbman->drop_index($table, $oldindex);
+        $newindex = new xmldb_index(
+            'modelid_selector_occasion',
+            XMLDB_INDEX_UNIQUE,
+            ['modelid', 'selectortype', 'selector', 'occasion']
+        );
+        foreach ([$oldindex, $newindex] as $index) {
+            if ($dbman->index_exists($table, $index)) {
+                $dbman->drop_index($table, $index);
+            }
         }
         $dbman->change_field_precision(
             $table,
@@ -77,11 +92,6 @@ function xmldb_block_catquiz_statistics_upgrade($oldversion) {
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
-        $newindex = new xmldb_index(
-            'modelid_selector_occasion',
-            XMLDB_INDEX_UNIQUE,
-            ['modelid', 'selectortype', 'selector', 'occasion']
-        );
         if (!$dbman->index_exists($table, $newindex)) {
             $dbman->add_index($table, $newindex);
         }
@@ -92,6 +102,47 @@ function xmldb_block_catquiz_statistics_upgrade($oldversion) {
         }
 
         upgrade_block_savepoint(true, 2026092902, 'catquiz_statistics');
+    }
+
+    if ($oldversion < 2026093001) {
+        // Import-, Variablen- und Konstrukteregister (Issue #3). Re-entrant: kommt die
+        // Site von 0.4.x, existieren Tabellen und Felder bereits aus Schritt 2026092900.
+        foreach (['block_catquiz_statistics_construct', 'block_catquiz_statistics_citem'] as $tablename) {
+            if (!$dbman->table_exists($tablename)) {
+                $dbman->install_one_table_from_xmldb_file(__DIR__ . '/install.xml', $tablename);
+            }
+        }
+
+        $table = new xmldb_table('block_catquiz_statistics_observation');
+        $field = new xmldb_field('constructid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'variableid');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        // Fremdschlüssel legen in Moodle einen Index an; nur hinzufügen, wenn er fehlt.
+        if (!$dbman->index_exists($table, new xmldb_index('constructid', XMLDB_INDEX_NOTUNIQUE, ['constructid']))) {
+            $key = new xmldb_key('constructid', XMLDB_KEY_FOREIGN, ['constructid'], 'block_catquiz_statistics_construct', ['id']);
+            $dbman->add_key($table, $key);
+        }
+
+        $table = new xmldb_table('block_catquiz_statistics_dataset');
+        $field = new xmldb_field('importhash', XMLDB_TYPE_CHAR, '40', null, null, null, null, 'matchfield');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        $index = new xmldb_index('importhash', XMLDB_INDEX_NOTUNIQUE, ['importhash']);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        upgrade_block_savepoint(true, 2026093001, 'catquiz_statistics');
+    }
+
+    if ($oldversion < 2026093003) {
+        // Outcome-Definitionen (Issue #6). Re-entrant.
+        if (!$dbman->table_exists('block_catquiz_statistics_outcome')) {
+            $dbman->install_one_table_from_xmldb_file(__DIR__ . '/install.xml', 'block_catquiz_statistics_outcome');
+        }
+        upgrade_block_savepoint(true, 2026093003, 'catquiz_statistics');
     }
 
     return true;

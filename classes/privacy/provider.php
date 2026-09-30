@@ -64,6 +64,8 @@ class provider implements
         'block_catquiz_statistics_dataset',
         'block_catquiz_statistics_variable',
         'block_catquiz_statistics_evalmodel',
+        'block_catquiz_statistics_construct',
+        'block_catquiz_statistics_outcome',
     ];
 
     /**

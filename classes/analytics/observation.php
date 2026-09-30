@@ -25,6 +25,7 @@ namespace block_catquiz_statistics\analytics;
  *
  * Variable keys follow a small convention:
  *   var:<variableid>                imported/register variable
+ *   construct:<constructid>         derived construct/subscale score
  *   catquiz:ability:<scaleid>       CAT person ability (attribute 'se')
  *   event:<action>:<objecttype>     semantic milestone / derived event
  *
@@ -56,6 +57,7 @@ final class observation {
      * @param string|null $label Human readable label of the variable.
      * @param int|null $datasetid Dataset for imported observations.
      * @param int|null $variableid Register variable for imported observations.
+     * @param int|null $constructid Construct for derived construct scores.
      * @param array $attributes Additional semantic attributes (e.g. se, occurrences).
      * @param array $provenance Minimal provenance information.
      * @param bool $issynthetic True for generated demo data.
@@ -101,6 +103,8 @@ final class observation {
         public readonly ?int $datasetid = null,
         /** @var int|null Variable id. */
         public readonly ?int $variableid = null,
+        /** @var int|null Construct id. */
+        public readonly ?int $constructid = null,
         /** @var array Additional attributes. */
         public readonly array $attributes = [],
         /** @var array Provenance. */

@@ -41,7 +41,7 @@ class evalmodel_repository {
     public const TABLE_ROLE = 'block_catquiz_statistics_evalrole';
 
     /** @var string[] Allowed selector types. */
-    public const SELECTORTYPES = ['variable', 'milestone', 'catquiz', 'gradeitem', 'activity'];
+    public const SELECTORTYPES = ['variable', 'construct', 'milestone', 'catquiz', 'outcome', 'gradeitem', 'activity'];
 
     /**
      * Create an evaluation model.

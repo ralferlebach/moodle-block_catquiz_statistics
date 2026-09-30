@@ -22,6 +22,10 @@ namespace block_catquiz_statistics\analytics;
  * "Not observed" is never the same as "observed and negative". Missing data
  * is never silently equated with non-participation or drop-out.
  *
+ * MISSING_CODED: the source contained a declared missing code (e.g. -99).
+ * MISSING_INSUFFICIENT: a derived score lacks the minimum number of valid items.
+ * INVALID: a value was present but violated type or range; it is kept, never "cleaned".
+ *
  * @package    block_catquiz_statistics
  * @copyright  2026 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -33,6 +37,9 @@ enum observation_status: string {
     case MISSING_NOTGRADED = 'missing_notgraded';
     case MISSING_TECHNICAL = 'missing_technical';
     case MISSING_UNKNOWN = 'missing_unknown';
+    case MISSING_CODED = 'missing_coded';
+    case MISSING_INSUFFICIENT = 'missing_insufficient';
+    case INVALID = 'invalid';
     case NOT_APPLICABLE = 'not_applicable';
 
     /**
@@ -42,5 +49,14 @@ enum observation_status: string {
      */
     public function has_value(): bool {
         return $this === self::OBSERVED;
+    }
+
+    /**
+     * Whether this status denotes missing data (as opposed to observed or invalid).
+     *
+     * @return bool
+     */
+    public function is_missing(): bool {
+        return str_starts_with($this->value, 'missing_');
     }
 }

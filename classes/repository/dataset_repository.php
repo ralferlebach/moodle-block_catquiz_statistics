@@ -50,7 +50,8 @@ class dataset_repository {
      * @param int $contextid Owning context (course or system).
      * @param string $name Name.
      * @param string $sourcetype Source type (csv, questionnaire, ...).
-     * @param array $options Optional: description, sourcecomponent, sourceref, versionof, matchfield, provenance, issynthetic.
+     * @param array $options Optional: description, sourcecomponent, sourceref, versionof, matchfield,
+     *                       importhash, provenance, issynthetic.
      * @return int Dataset id.
      */
     public function create_dataset(int $contextid, string $name, string $sourcetype, array $options = []): int {
@@ -71,6 +72,7 @@ class dataset_repository {
             'version' => $version,
             'versionof' => $options['versionof'] ?? null,
             'matchfield' => $options['matchfield'] ?? null,
+            'importhash' => $options['importhash'] ?? null,
             'provenance' => isset($options['provenance']) ? json_encode($options['provenance']) : null,
             'issynthetic' => (int) !empty($options['issynthetic']),
             'usermodified' => (int) ($USER->id ?? 0),
@@ -88,6 +90,31 @@ class dataset_repository {
     public function get_dataset(int $datasetid): ?\stdClass {
         global $DB;
         return $DB->get_record(self::TABLE_DATASET, ['id' => $datasetid]) ?: null;
+    }
+
+    /**
+     * Existing dataset with the same import identity in a context, if any.
+     *
+     * @param int $contextid Context.
+     * @param string $importhash Import hash.
+     * @return \stdClass|null
+     */
+    public function find_by_importhash(int $contextid, string $importhash): ?\stdClass {
+        global $DB;
+        $params = ['contextid' => $contextid, 'importhash' => $importhash];
+        $records = $DB->get_records(self::TABLE_DATASET, $params, 'id DESC', '*', 0, 1);
+        return $records ? reset($records) : null;
+    }
+
+    /**
+     * Whether a newer version supersedes this dataset.
+     *
+     * @param int $datasetid Dataset id.
+     * @return bool
+     */
+    public function is_superseded(int $datasetid): bool {
+        global $DB;
+        return $DB->record_exists(self::TABLE_DATASET, ['versionof' => $datasetid]);
     }
 
     /**

@@ -20,6 +20,7 @@ use block_catquiz_statistics\analytics\provider\catquiz_provider;
 use block_catquiz_statistics\analytics\provider\imported_observation_provider;
 use block_catquiz_statistics\analytics\provider\milestone_provider;
 use block_catquiz_statistics\analytics\provider\observation_provider_interface;
+use block_catquiz_statistics\analytics\provider\outcome_provider;
 use block_catquiz_statistics\hook\collect_observation_providers;
 
 /**
@@ -58,6 +59,7 @@ class analytics_query_service {
         $hook->add_provider(new catquiz_provider());
         $hook->add_provider(new milestone_provider());
         $hook->add_provider(new imported_observation_provider());
+        $hook->add_provider(new outcome_provider());
         \core\di::get(\core\hook\manager::class)->dispatch($hook);
         return new self($hook->get_providers());
     }
