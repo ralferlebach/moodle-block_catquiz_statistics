@@ -20,6 +20,7 @@ use block_catquiz_statistics\analytics\observation;
 use block_catquiz_statistics\analytics\observation_query;
 use block_catquiz_statistics\analytics\observation_status;
 use block_catquiz_statistics\analytics\value_type;
+use block_catquiz_statistics\demo\cohort_generator;
 use block_catquiz_statistics\repository\outcome_repository;
 
 /**
@@ -29,7 +30,8 @@ use block_catquiz_statistics\repository\outcome_repository;
  * Population: the users of the query, or else the gradable users of the
  * source course. For persons without a record the configured absence
  * semantics applies (default: missing_norecord). A grade row without a grade
- * is missing_notgraded. Excluded grades are not_applicable.
+ * is missing_notgraded. Excluded grades are not_applicable. Outcomes of a
+ * registered demo course are flagged synthetic.
  *
  * @package    block_catquiz_statistics
  * @copyright  2026 Ralf Erlebach
@@ -66,12 +68,15 @@ class outcome_provider implements observation_provider_interface {
      * @return observation[]
      */
     public function get_observations(observation_query $query): array {
-        if ($query->excludes_prefix('outcome:') || $query->synthetic === true) {
+        if ($query->excludes_prefix('outcome:')) {
             return [];
         }
         $result = [];
         foreach ($this->repository->get_all($query->courseids) as $def) {
             if (!$query->matches_variable('outcome:' . $def->id)) {
+                continue;
+            }
+            if ($query->synthetic !== null && $query->synthetic !== cohort_generator::is_demo_course((int) $def->courseid)) {
                 continue;
             }
             foreach ($this->for_definition($def, $query->userids) as $obs) {
@@ -91,6 +96,8 @@ class outcome_provider implements observation_provider_interface {
      * @return observation[]
      */
     public function for_definition(\stdClass $def, ?array $userids = null): array {
+        global $CFG;
+        require_once($CFG->libdir . '/grade/constants.php');
         $population = $userids ?? $this->gradable_users((int) $def->courseid);
         if (empty($population)) {
             return [];
@@ -204,6 +211,7 @@ class outcome_provider implements observation_provider_interface {
             label: $def->label,
             attributes: ['shortname' => $def->shortname, 'signal' => $signal, 'absence' => $def->absence],
             provenance: ['definitionid' => (int) $def->id, 'definitionmodified' => (int) $def->timemodified],
+            issynthetic: cohort_generator::is_demo_course((int) $def->courseid),
         );
     }
 

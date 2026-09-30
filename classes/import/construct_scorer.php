@@ -105,6 +105,7 @@ class construct_scorer {
                 valuenumeric: $value,
                 datasetid: $datasetid,
                 constructid: $constructid,
+                issynthetic: $first->issynthetic,
                 provenance: [
                     'constructversion' => (int) $construct->version,
                     'aggregation' => $construct->aggregation,

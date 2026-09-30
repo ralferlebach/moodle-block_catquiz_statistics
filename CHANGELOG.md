@@ -6,7 +6,26 @@ versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.5.0] — Build 2026093003 (30.09.2026)
+## [0.5.0] — Build 2026093004 (30.09.2026)
+
+### Added (Build 2026093004) — Issue #9, synthetische Demo-Kohorte
+- `demo\rng` (mulberry32, eigener Zustand), `demo\scenario` (Profile balanced | highuptake_lowlearning |
+  lowuptake_highperformance | mixed; SIMULIERTE Parameter), `demo\cohort_generator` (generate/simulate/reset).
+- Tabellen `demo` und `demouser` (Registry): Reset entfernt ausschließlich, was ein Lauf erzeugt hat,
+  und bricht ab, wenn der registrierte Kurs kein Demo-Kurs ist.
+- Ebene A: Demografie, MMQ-ähnliche Items mit Konstrukten (inkl. Reverse-Item), CAT-Ergebnisse T0/T1 mit SE,
+  Meilensteine (Test gestartet/abgeschlossen, Feedback geöffnet, Empfehlung ausgegeben, Lernangebote
+  geöffnet/abgeschlossen, Re-Test), Demo-Evaluationsmodell entlang der Wirkungskette.
+- Ebene B: eigener Demo-Kurs („SYNTHETIC DEMO DATA“), nicht anmeldbare Demo-Nutzer ohne reale Kennungen
+  (example.invalid, keine idnumber), echtes Gradebook-Item „Exam“ mit Outcome-Definitionen (Punkte, bestanden).
+- Alle Datenpunkte sind `issynthetic`; Konstruktwerte übernehmen die Markierung, Outcomes aus Demo-Kursen werden
+  vom Outcome-Provider als synthetisch gekennzeichnet.
+- CLI `cli/demo.php` (--generate --seed --size --profile --classes | --list | --reset=ID), nur mit Setting `enabledemo`.
+
+### Fixed (Build 2026093004)
+- `outcome_provider` lud die Grade-Konstanten nicht (GRADE_TYPE_SCALE) — trat nur außerhalb der Tests auf.
+
+### Build 2026093003 (30.09.2026)
 
 ### Added (Build 2026093003) — Issue #6, Outcome-Adapter
 - Tabelle `outcome` (nur Definitionen; Werte werden live gelesen, keine Replikation von Gradebook-Daten).

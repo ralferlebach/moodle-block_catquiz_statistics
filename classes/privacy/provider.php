@@ -101,7 +101,10 @@ class provider implements
             'status' => 'privacy:metadata:subjectmap:status',
         ], 'privacy:metadata:subjectmap');
 
-        foreach (array_merge(self::AUTHORED, [self::T_EVMAP]) as $table) {
+        $collection->add_database_table('block_catquiz_statistics_demouser', [
+            'userid' => 'privacy:metadata:demouser:userid',
+        ], 'privacy:metadata:demouser');
+        foreach (array_merge(self::AUTHORED, [self::T_EVMAP, 'block_catquiz_statistics_demo']) as $table) {
             $collection->add_database_table($table, [
                 'usermodified' => 'privacy:metadata:authored:usermodified',
             ], 'privacy:metadata:authored');

@@ -48,6 +48,8 @@ function xmldb_block_catquiz_statistics_upgrade($oldversion) {
             'block_catquiz_statistics_construct',
             'block_catquiz_statistics_citem',
             'block_catquiz_statistics_outcome',
+            'block_catquiz_statistics_demo',
+            'block_catquiz_statistics_demouser',
         ];
         foreach ($tables as $tablename) {
             if (!$dbman->table_exists($tablename)) {
@@ -143,6 +145,16 @@ function xmldb_block_catquiz_statistics_upgrade($oldversion) {
             $dbman->install_one_table_from_xmldb_file(__DIR__ . '/install.xml', 'block_catquiz_statistics_outcome');
         }
         upgrade_block_savepoint(true, 2026093003, 'catquiz_statistics');
+    }
+
+    if ($oldversion < 2026093004) {
+        // Registry synthetischer Demo-Kohorten (Issue #9). Re-entrant.
+        foreach (['block_catquiz_statistics_demo', 'block_catquiz_statistics_demouser'] as $tablename) {
+            if (!$dbman->table_exists($tablename)) {
+                $dbman->install_one_table_from_xmldb_file(__DIR__ . '/install.xml', $tablename);
+            }
+        }
+        upgrade_block_savepoint(true, 2026093004, 'catquiz_statistics');
     }
 
     return true;
