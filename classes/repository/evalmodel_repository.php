@@ -40,6 +40,9 @@ class evalmodel_repository {
     /** @var string Role mapping table. */
     public const TABLE_ROLE = 'block_catquiz_statistics_evalrole';
 
+    /** @var string Revision table. */
+    public const TABLE_REVISION = 'block_catquiz_statistics_evalrevision';
+
     /** @var string[] Allowed selector types. */
     public const SELECTORTYPES = ['variable', 'construct', 'milestone', 'catquiz', 'outcome', 'gradeitem', 'activity'];
 
@@ -55,7 +58,7 @@ class evalmodel_repository {
         global $DB, $USER;
 
         $now = time();
-        return (int) $DB->insert_record(self::TABLE_MODEL, (object) [
+        $id = (int) $DB->insert_record(self::TABLE_MODEL, (object) [
             'contextid' => $contextid,
             'name' => $name,
             'description' => $options['description'] ?? null,
@@ -67,6 +70,8 @@ class evalmodel_repository {
             'timecreated' => $now,
             'timemodified' => $now,
         ]);
+        $this->snapshot($id);
+        return $id;
     }
 
     /**
@@ -101,6 +106,7 @@ class evalmodel_repository {
      * @param string $occasion Measurement occasion, see {@see occasion}; '' or 'any' = any.
      * @param string|null $label Display label.
      * @param int $sortorder Order within the role.
+     * @param bool $newversion False while building an initial model: updates the current version's snapshot instead.
      * @return int Role mapping id.
      * @throws \coding_exception On invalid selector type or occasion.
      */
@@ -111,7 +117,8 @@ class evalmodel_repository {
         string $selector,
         string $occasion = '',
         ?string $label = null,
-        int $sortorder = 0
+        int $sortorder = 0,
+        bool $newversion = true
     ): int {
         global $DB;
 
@@ -140,7 +147,11 @@ class evalmodel_repository {
                 'timecreated' => time(),
             ]);
         }
-        $this->bump_version($modelid);
+        if ($newversion) {
+            $this->bump_version($modelid);
+        } else {
+            $this->snapshot($modelid);
+        }
         return $id;
     }
 
@@ -203,7 +214,70 @@ class evalmodel_repository {
     public function delete_model(int $modelid): void {
         global $DB;
         $DB->delete_records(self::TABLE_ROLE, ['modelid' => $modelid]);
+        $DB->delete_records(self::TABLE_REVISION, ['modelid' => $modelid]);
         $DB->delete_records(self::TABLE_MODEL, ['id' => $modelid]);
+    }
+
+    /**
+     * Replace the model configuration (population, transitions, windows); creates a new version.
+     *
+     * @param int $modelid Model id.
+     * @param array $config Configuration.
+     */
+    public function update_config(int $modelid, array $config): void {
+        global $DB;
+        $DB->set_field(self::TABLE_MODEL, 'config', json_encode($config), ['id' => $modelid]);
+        $this->bump_version($modelid);
+    }
+
+    /**
+     * Decoded configuration of a model.
+     *
+     * @param int $modelid Model id.
+     * @return array
+     */
+    public function get_config(int $modelid): array {
+        $model = $this->get_model($modelid);
+        return ($model && $model->config) ? (json_decode($model->config, true) ?: []) : [];
+    }
+
+    /**
+     * Snapshot of a model version (config + role mappings) as stored in the revision log.
+     *
+     * @param int $modelid Model id.
+     * @param int|null $version Version (null = current).
+     * @return array|null
+     */
+    public function get_revision(int $modelid, ?int $version = null): ?array {
+        global $DB;
+        $version = $version ?? (int) $DB->get_field(self::TABLE_MODEL, 'version', ['id' => $modelid]);
+        $snapshot = $DB->get_field(self::TABLE_REVISION, 'snapshot', ['modelid' => $modelid, 'version' => $version]);
+        return $snapshot ? json_decode($snapshot, true) : null;
+    }
+
+    /**
+     * Store a revision-safe snapshot of the current model version.
+     *
+     * @param int $modelid Model id.
+     */
+    private function snapshot(int $modelid): void {
+        global $DB, $USER;
+        $model = $this->get_model($modelid);
+        $roles = array_values(array_map(static fn($r) => [
+            'role' => $r->role, 'selectortype' => $r->selectortype, 'selector' => $r->selector,
+            'occasion' => $r->occasion, 'label' => $r->label, 'sortorder' => (int) $r->sortorder,
+        ], $DB->get_records(self::TABLE_ROLE, ['modelid' => $modelid], 'sortorder, id')));
+        $snapshot = json_encode([
+            'modelid' => $modelid, 'version' => (int) $model->version, 'name' => $model->name,
+            'config' => $model->config ? json_decode($model->config, true) : [], 'roles' => $roles,
+        ]);
+        $existing = $DB->get_record(self::TABLE_REVISION, ['modelid' => $modelid, 'version' => $model->version]);
+        if ($existing) {
+            $DB->set_field(self::TABLE_REVISION, 'snapshot', $snapshot, ['id' => $existing->id]);
+            return;
+        }
+        $DB->insert_record(self::TABLE_REVISION, (object) ['modelid' => $modelid, 'version' => (int) $model->version,
+            'snapshot' => $snapshot, 'usermodified' => (int) ($USER->id ?? 0), 'timecreated' => time()]);
     }
 
     /**
@@ -218,5 +292,6 @@ class evalmodel_repository {
               WHERE id = :id',
             ['now' => time(), 'userid' => (int) ($USER->id ?? 0), 'id' => $modelid]
         );
+        $this->snapshot($modelid);
     }
 }

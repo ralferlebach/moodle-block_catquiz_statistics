@@ -50,6 +50,7 @@ function xmldb_block_catquiz_statistics_upgrade($oldversion) {
             'block_catquiz_statistics_outcome',
             'block_catquiz_statistics_demo',
             'block_catquiz_statistics_demouser',
+            'block_catquiz_statistics_evalrevision',
         ];
         foreach ($tables as $tablename) {
             if (!$dbman->table_exists($tablename)) {
@@ -155,6 +156,14 @@ function xmldb_block_catquiz_statistics_upgrade($oldversion) {
             }
         }
         upgrade_block_savepoint(true, 2026093004, 'catquiz_statistics');
+    }
+
+    if ($oldversion < 2026093005) {
+        // Revisionssichere Snapshots der Evaluationsmodelle (Issue #7). Re-entrant.
+        if (!$dbman->table_exists('block_catquiz_statistics_evalrevision')) {
+            $dbman->install_one_table_from_xmldb_file(__DIR__ . '/install.xml', 'block_catquiz_statistics_evalrevision');
+        }
+        upgrade_block_savepoint(true, 2026093005, 'catquiz_statistics');
     }
 
     return true;

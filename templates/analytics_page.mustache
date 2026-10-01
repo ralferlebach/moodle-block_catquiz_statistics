@@ -1,0 +1,257 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_catquiz_statistics/analytics_page
+
+    Learning-analytics workspaces: Data, Learning Analytics, Evaluation model, Analysis.
+
+    Example context (json):
+    {
+        "courseid": 2, "coursename": "Mathematik 1", "workspace": "analytics", "isanalytics": true,
+        "tabs": [{"label": "Learning Analytics", "url": "#", "active": true}],
+        "detailreporturl": "#", "actionurl": "#", "hasmodel": true,
+        "models": [{"id": 1, "name": "Effect chain", "selected": true}],
+        "synthetic": true, "banner": "SYNTHETIC DEMO DATA", "disclaimer": "Simulated.",
+        "model": {"name": "Effect chain", "version": 3, "issynthetic": true, "description": ""},
+        "population": {"n": 120, "steps": [{"label": "Enrolled participants", "n": 120}]},
+        "overview": [{"label": "Exposure", "n": 110, "total": 120, "pct": 92}],
+        "hasfunnel": true,
+        "legend": [{"state": "reached", "label": "reached"}],
+        "funnel": [{"index": 1, "label": "Test started", "definition": "First attempt started.", "reached": 110,
+            "eligible": 120, "ratepct": 92, "denominator": "of the population",
+            "segments": [{"state": "reached", "label": "reached", "n": 110, "pct": 91.67, "visible": true}]}],
+        "change": {"label": "Theta (tp:T0 / tp:T1)", "assumption": "independent errors",
+            "rows": [{"label": "Reliably improved", "n": 12}]},
+        "canviewdetails": true,
+        "persons": [{"id": 5, "name": "Synthetic Demo 0001", "selected": true}],
+        "hastimeline": true, "selectedname": "Synthetic Demo 0001",
+        "timeline": [{"coursechange": true, "time": "1/09/26, 10:00", "label": "Test: started", "timepoint": "",
+            "value": "", "course": "Mathematik 1", "synthetic": true}]
+    }
+}}
+<div class="block_catquiz_statistics-la" data-region="la-workspace">
+    <ul class="nav nav-tabs mb-3" role="tablist">
+        {{#tabs}}
+        <li class="nav-item">
+            <a class="nav-link {{#active}}active{{/active}}" href="{{{url}}}" {{#active}}aria-current="page"{{/active}}>{{label}}</a>
+        </li>
+        {{/tabs}}
+        <li class="nav-item ms-auto ml-auto">
+            <a class="nav-link" href="{{{detailreporturl}}}">{{#str}}workspace:detailreports, block_catquiz_statistics{{/str}}</a>
+        </li>
+    </ul>
+
+    {{#synthetic}}
+    <div class="la-synthetic" role="note">
+        <strong>{{banner}}</strong>
+        <span>{{disclaimer}}</span>
+    </div>
+    {{/synthetic}}
+
+    {{#models.0}}
+    <form method="get" action="{{actionurl}}" class="la-modelpicker d-flex flex-wrap align-items-end mb-3">
+        <input type="hidden" name="courseid" value="{{courseid}}">
+        <input type="hidden" name="workspace" value="{{workspace}}">
+        <label class="me-2 mr-2 mb-0" for="la-modelid">{{#str}}model, block_catquiz_statistics{{/str}}</label>
+        <select id="la-modelid" name="modelid" class="custom-select form-select me-2 mr-2 w-auto">
+            {{#models}}<option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/models}}
+        </select>
+        <button type="submit" class="btn btn-secondary">{{#str}}show, block_catquiz_statistics{{/str}}</button>
+    </form>
+    {{/models.0}}
+
+    {{#isdata}}
+    <section class="mb-4" aria-labelledby="la-datasets">
+        <h3 id="la-datasets" class="h5">{{#str}}data:datasets, block_catquiz_statistics{{/str}}</h3>
+        {{#datasets.0}}
+        <div class="table-responsive">
+        <table class="table table-sm la-table">
+            <thead><tr>
+                <th scope="col">{{#str}}name{{/str}}</th>
+                <th scope="col">{{#str}}data:source, block_catquiz_statistics{{/str}}</th>
+                <th scope="col" class="text-end text-right">{{#str}}data:persons, block_catquiz_statistics{{/str}}</th>
+                <th scope="col">{{#str}}data:version, block_catquiz_statistics{{/str}}</th>
+                <th scope="col">{{#str}}data:imported, block_catquiz_statistics{{/str}}</th>
+            </tr></thead>
+            <tbody>
+            {{#datasets}}
+            <tr {{#superseded}}class="la-superseded"{{/superseded}}>
+                <td>{{name}} {{#synthetic}}<span class="badge la-badge-synthetic">{{#str}}demo:short, block_catquiz_statistics{{/str}}</span>{{/synthetic}}</td>
+                <td>{{source}}</td>
+                <td class="text-end text-right">{{persons}}</td>
+                <td>{{version}} {{#superseded}}<span class="text-muted">({{#str}}data:superseded, block_catquiz_statistics{{/str}})</span>{{/superseded}}</td>
+                <td>{{time}}</td>
+            </tr>
+            {{/datasets}}
+            </tbody>
+        </table>
+        </div>
+        {{/datasets.0}}
+        {{^datasets.0}}<p class="text-muted">{{#str}}data:nodatasets, block_catquiz_statistics{{/str}}</p>{{/datasets.0}}
+
+        {{#constructs.0}}
+        <h3 class="h5 mt-4">{{#str}}data:constructs, block_catquiz_statistics{{/str}}</h3>
+        <ul class="la-plainlist">
+            {{#constructs}}<li><strong>{{label}}</strong> <span class="text-muted">{{instrument}}, {{aggregation}}, min. {{minvalid}}, v{{version}}</span></li>{{/constructs}}
+        </ul>
+        {{/constructs.0}}
+
+        {{#outcomes.0}}
+        <h3 class="h5 mt-4">{{#str}}data:outcomes, block_catquiz_statistics{{/str}}</h3>
+        <ul class="la-plainlist">
+            {{#outcomes}}<li><strong>{{label}}</strong> <span class="text-muted">{{source}}: {{signal}}, {{#str}}data:absence, block_catquiz_statistics{{/str}} {{absence}}{{#timepoint}}, {{timepoint}}{{/timepoint}}</span></li>{{/outcomes}}
+        </ul>
+        {{/outcomes.0}}
+    </section>
+    {{/isdata}}
+
+    {{^hasmodel}}
+    {{^isdata}}
+    <p class="la-empty">{{#str}}model:none, block_catquiz_statistics{{/str}}</p>
+    {{/isdata}}
+    {{/hasmodel}}
+
+    {{#hasmodel}}
+    {{^isdata}}
+    <header class="la-modelhead mb-3">
+        <h2 class="h4 mb-1">{{model.name}} <span class="la-version">{{#str}}model:version, block_catquiz_statistics, {{model.version}}{{/str}}</span></h2>
+        <p class="mb-2 la-population">
+            {{#str}}population, block_catquiz_statistics{{/str}}:
+            {{#population.steps}}<span class="la-criterion">{{label}} <strong>{{n}}</strong></span>{{/population.steps}}
+        </p>
+    </header>
+    {{/isdata}}
+
+    {{#isanalytics}}
+    {{#overview.0}}
+    <section class="mb-4" aria-labelledby="la-coverage">
+        <h3 id="la-coverage" class="h5">{{#str}}dashboard:coverage, block_catquiz_statistics{{/str}}</h3>
+        <dl class="la-coverage">
+            {{#overview}}
+            <div class="la-coverage-row">
+                <dt>{{label}}</dt>
+                <dd><span class="la-meter" aria-hidden="true"><span style="width: {{pct}}%"></span></span>
+                    {{#str}}nofm, block_catquiz_statistics, {"n": {{n}}, "m": {{total}} }{{/str}}</dd>
+            </div>
+            {{/overview}}
+        </dl>
+    </section>
+    {{/overview.0}}
+
+    <section class="mb-4" aria-labelledby="la-funnel">
+        <h3 id="la-funnel" class="h5">{{#str}}dashboard:funnel, block_catquiz_statistics{{/str}}</h3>
+        {{#hasfunnel}}
+        <ul class="la-legend" aria-label="{{#str}}dashboard:legend, block_catquiz_statistics{{/str}}">
+            {{#legend}}<li><span class="la-swatch la-{{state}}" aria-hidden="true"></span>{{label}}</li>{{/legend}}
+        </ul>
+        <ol class="la-funnel">
+            {{#funnel}}
+            <li class="la-step">
+                <div class="la-step-head">
+                    <span class="la-step-label">{{label}}</span>
+                    <span class="la-step-rate">
+                        {{#ratepct}}<strong>{{ratepct}} %</strong>{{/ratepct}}
+                        {{#str}}nofm, block_catquiz_statistics, {"n": {{reached}}, "m": {{eligible}} }{{/str}} {{denominator}}
+                    </span>
+                </div>
+                <div class="la-bar" role="img" aria-label="{{#segments}}{{#visible}}{{label}} {{n}}; {{/visible}}{{/segments}}">
+                    {{#segments}}{{#visible}}<span class="la-seg la-{{state}}" style="width: {{pct}}%" title="{{label}}: {{n}}"></span>{{/visible}}{{/segments}}
+                </div>
+                {{#definition}}<p class="la-step-def">{{definition}}</p>{{/definition}}
+            </li>
+            {{/funnel}}
+        </ol>
+        {{/hasfunnel}}
+        {{^hasfunnel}}<p class="text-muted">{{#str}}dashboard:nosteps, block_catquiz_statistics{{/str}}</p>{{/hasfunnel}}
+    </section>
+
+    {{#change}}
+    <section class="mb-4" aria-labelledby="la-change">
+        <h3 id="la-change" class="h5">{{#str}}dashboard:change, block_catquiz_statistics{{/str}}: {{label}}</h3>
+        <table class="table table-sm w-auto la-table">
+            <tbody>{{#rows}}<tr><th scope="row">{{label}}</th><td class="text-end text-right">{{n}}</td></tr>{{/rows}}</tbody>
+        </table>
+        <p class="small text-muted">{{#str}}dashboard:assumption, block_catquiz_statistics{{/str}} {{assumption}}</p>
+    </section>
+    {{/change}}
+
+    {{#canviewdetails}}
+    <section class="mb-4" aria-labelledby="la-timeline">
+        <h3 id="la-timeline" class="h5">{{#str}}dashboard:timeline, block_catquiz_statistics{{/str}}</h3>
+        {{#persons.0}}
+        <form method="get" action="{{actionurl}}" class="d-flex flex-wrap align-items-end mb-3">
+            <input type="hidden" name="courseid" value="{{courseid}}">
+            <input type="hidden" name="workspace" value="analytics">
+            <input type="hidden" name="modelid" value="{{model.modelid}}">
+            <label class="me-2 mr-2 mb-0" for="la-userid">{{#str}}person, block_catquiz_statistics{{/str}}</label>
+            <select id="la-userid" name="userid" class="custom-select form-select me-2 mr-2 w-auto">
+                <option value="0">{{#str}}choosedots{{/str}}</option>
+                {{#persons}}<option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>{{/persons}}
+            </select>
+            <button type="submit" class="btn btn-secondary">{{#str}}show, block_catquiz_statistics{{/str}}</button>
+        </form>
+        {{/persons.0}}
+        {{#hastimeline}}
+        <ol class="la-timeline" aria-label="{{selectedname}}">
+            {{#timeline}}
+            {{#coursechange}}<li class="la-tl-course">{{course}}</li>{{/coursechange}}
+            <li><time>{{time}}</time> <span class="la-tl-label">{{label}}</span>{{#timepoint}} <span class="la-tp">{{timepoint}}</span>{{/timepoint}}
+                {{#value}}<span class="la-tl-value">{{value}}</span>{{/value}}</li>
+            {{/timeline}}
+        </ol>
+        {{/hastimeline}}
+    </section>
+    {{/canviewdetails}}
+    {{/isanalytics}}
+
+    {{#ismodel}}
+    <section class="mb-4" aria-labelledby="la-roles">
+        <h3 id="la-roles" class="h5">{{#str}}model:roles, block_catquiz_statistics{{/str}}</h3>
+        {{#roles}}
+        <h4 class="h6 mt-3 mb-1">{{label}}</h4>
+        {{#empty}}<p class="text-muted small mb-1">{{#str}}model:roleunused, block_catquiz_statistics{{/str}}</p>{{/empty}}
+        <ul class="la-plainlist">{{#items}}<li>{{label}} <span class="text-muted small">{{source}}, {{#str}}model:occasion, block_catquiz_statistics{{/str}} {{occasion}}</span></li>{{/items}}</ul>
+        {{/roles}}
+    </section>
+    <section class="mb-4" aria-labelledby="la-transitions">
+        <h3 id="la-transitions" class="h5">{{#str}}model:transitions, block_catquiz_statistics{{/str}}</h3>
+        <div class="table-responsive">
+        <table class="table table-sm la-table">
+            <thead><tr>
+                <th scope="col">#</th>
+                <th scope="col">{{#str}}model:step, block_catquiz_statistics{{/str}}</th>
+                <th scope="col">{{#str}}model:variable, block_catquiz_statistics{{/str}}</th>
+                <th scope="col">{{#str}}model:occasion, block_catquiz_statistics{{/str}}</th>
+                <th scope="col">{{#str}}model:definition, block_catquiz_statistics{{/str}}</th>
+            </tr></thead>
+            <tbody>{{#transitions}}<tr><td>{{index}}</td><td>{{label}}</td><td>{{variable}} <span class="text-muted small">({{source}})</span></td><td>{{occasion}}</td><td>{{definition}}{{#window}} ({{window}}){{/window}}</td></tr>{{/transitions}}</tbody>
+        </table>
+        </div>
+    </section>
+    {{#revisions.0}}
+    <section class="mb-4" aria-labelledby="la-revisions">
+        <h3 id="la-revisions" class="h5">{{#str}}model:revisions, block_catquiz_statistics{{/str}}</h3>
+        <ul class="la-plainlist">{{#revisions}}<li>{{#str}}model:version, block_catquiz_statistics, {{version}}{{/str}}: {{time}}</li>{{/revisions}}</ul>
+    </section>
+    {{/revisions.0}}
+    {{/ismodel}}
+
+    {{#isanalysis}}
+    <p class="la-empty">{{#str}}analysis:upcoming, block_catquiz_statistics{{/str}}</p>
+    {{/isanalysis}}
+    {{/hasmodel}}
+</div>

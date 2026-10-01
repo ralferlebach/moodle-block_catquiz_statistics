@@ -150,6 +150,13 @@ class block_catquiz_statistics extends block_base {
             'block_catquiz_statistics/block_main',
             $main->export_for_template($OUTPUT)
         );
+        if (has_capability('block/catquiz_statistics:viewanalytics', $coursecontext)) {
+            $this->content->text .= html_writer::link(
+                new moodle_url('/blocks/catquiz_statistics/analytics.php', ['courseid' => $courseid]),
+                get_string('analytics:title', 'block_catquiz_statistics'),
+                ['class' => 'btn btn-sm btn-outline-primary d-block mt-1']
+            );
+        }
 
         return $this->content;
     }

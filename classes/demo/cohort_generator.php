@@ -17,6 +17,7 @@
 namespace block_catquiz_statistics\demo;
 
 use block_catquiz_statistics\analytics\analytic_role;
+use block_catquiz_statistics\analytics\evaluation\model_templates;
 use block_catquiz_statistics\analytics\object_type;
 use block_catquiz_statistics\analytics\observation;
 use block_catquiz_statistics\analytics\semantic_action;
@@ -119,6 +120,13 @@ class cohort_generator {
         ]);
         $ctxid = (int) \context_course::instance($course->id)->id;
         self::$democourses = [];
+        // Place the block in the demo course so it shows up in the course navigation and block area.
+        $now = time();
+        $blockid = $DB->insert_record('block_instances', (object) ['blockname' => 'catquiz_statistics',
+            'parentcontextid' => $ctxid, 'showinsubcontexts' => 0, 'requiredbytheme' => 0, 'pagetypepattern' => 'course-view-*',
+            'subpagepattern' => null, 'defaultregion' => 'side-pre', 'defaultweight' => 0, 'configdata' => '',
+            'timecreated' => $now, 'timemodified' => $now]);
+        \context_block::instance($blockid);
         $demoid = (int) $DB->insert_record(self::TABLE, (object) [
             'seed' => $seed, 'profile' => $profile, 'cohortsize' => $size, 'courseid' => $course->id,
             'config' => json_encode(['classes' => $classes, 'start' => $start, 'simulated' => scenario::PROFILES]),
@@ -440,7 +448,9 @@ class cohort_generator {
         $studentrole = (int) $DB->get_field('role', 'id', ['shortname' => 'student']);
         $userids = [];
         foreach (array_keys($people) as $pi) {
-            $username = sprintf('%s%d_%d_%04d', self::PREFIX, $seed, $demoid, $pi);
+            // The demo course id is unique for the lifetime of the site (unlike the registry id, which
+            // restarts after a plugin reinstall), so usernames can never collide with leftovers.
+            $username = sprintf('%s%d_c%d_%04d', self::PREFIX, $seed, $course->id, $pi);
             $userid = user_create_user((object) [
                 'username' => $username,
                 'auth' => 'nologin',
@@ -623,44 +633,62 @@ class cohort_generator {
         global $DB;
         $banner = get_string('demo:banner', 'block_catquiz_statistics');
         $models = new evalmodel_repository();
+        $config = model_templates::config('effectchain');
+        if (isset($vars['theta'])) {
+            $config['transitions'][] = ['key' => 'var:' . $vars['theta'], 'occasion' => 'tp:T1',
+                'label' => get_string('step:retestresult', 'block_catquiz_statistics'),
+                'definition' => get_string('step:retestresult:definition', 'block_catquiz_statistics')];
+        }
+        if (isset($vars['exam_participation'])) {
+            $config['transitions'][] = ['key' => 'var:' . $vars['exam_participation'], 'occasion' => 'any',
+                'label' => get_string('step:examparticipation', 'block_catquiz_statistics'),
+                'definition' => get_string('step:examparticipation:definition', 'block_catquiz_statistics')];
+        }
         $mid = $models->create_model($ctxid, "$banner – Effect chain", ['issynthetic' => true, 'template' => 'effectchain',
-            'description' => 'Acceptance -> use -> effective use -> competence gain -> success (SIMULATED data)']);
+            'description' => 'Acceptance -> use -> effective use -> competence gain -> success (SIMULATED data)',
+            'config' => $config]);
         $sort = 0;
+        // Initial model: all mappings belong to version 1 (no version bump per mapping).
+        $assign = static function (
+            analytic_role $role,
+            string $type,
+            string $selector,
+            string $occasion,
+            ?string $label = null
+        ) use (
+            $models,
+            $mid,
+            &$sort
+): void {
+            $models->assign_role($mid, $role, $type, $selector, $occasion, $label, $sort++, newversion: false);
+        };
         foreach (['degree', 'agegroup', 'priorschool'] as $s) {
             if (isset($vars[$s])) {
-                $models->assign_role($mid, analytic_role::COVARIATE, 'variable', 'var:' . $vars[$s], 'any', null, $sort++);
+                $assign(analytic_role::COVARIATE, 'variable', 'var:' . $vars[$s], 'any');
             }
         }
         foreach ($DB->get_records(construct_repository::TABLE, ['contextid' => $ctxid, 'issynthetic' => 1]) as $c) {
-            $models->assign_role($mid, analytic_role::DISPOSITION, 'construct', 'construct:' . $c->id, 'any', null, $sort++);
+            $assign(analytic_role::DISPOSITION, 'construct', 'construct:' . $c->id, 'any');
         }
         foreach (
             ['event:started:assessment', 'event:completed:assessment', 'event:viewed:feedback',
                 'event:delivered:recommendation'] as $key
         ) {
-            $models->assign_role($mid, analytic_role::EXPOSURE, 'milestone', $key, 'first', null, $sort++);
+            $assign(analytic_role::EXPOSURE, 'milestone', $key, 'first');
         }
         foreach (['event:viewed:learning_activity', 'event:completed:learning_activity', 'event:restarted:assessment'] as $key) {
-            $models->assign_role($mid, analytic_role::BEHAVIOUR, 'milestone', $key, 'any', null, $sort++);
+            $assign(analytic_role::BEHAVIOUR, 'milestone', $key, 'any');
         }
         if (isset($vars['theta'])) {
             $theta = 'var:' . $vars['theta'];
-            $models->assign_role($mid, analytic_role::PERFORMANCE, 'variable', $theta, 'tp:T0', 'Theta T0', $sort++);
-            $models->assign_role($mid, analytic_role::PERFORMANCE, 'variable', $theta, 'tp:T1', 'Theta T1', $sort++);
+            $assign(analytic_role::PERFORMANCE, 'variable', $theta, 'tp:T0', 'Theta T0');
+            $assign(analytic_role::PERFORMANCE, 'variable', $theta, 'tp:T1', 'Theta T1');
         }
         foreach ($outcomes as $id) {
-            $models->assign_role($mid, analytic_role::OUTCOME, 'outcome', 'outcome:' . $id, 'any', null, $sort++);
+            $assign(analytic_role::OUTCOME, 'outcome', 'outcome:' . $id, 'any');
         }
         if (isset($vars['exam_participation'])) {
-            $models->assign_role(
-                $mid,
-                analytic_role::OUTCOME,
-                'variable',
-                'var:' . $vars['exam_participation'],
-                'any',
-                null,
-                $sort++
-            );
+            $assign(analytic_role::OUTCOME, 'variable', 'var:' . $vars['exam_participation'], 'any');
         }
     }
 }

@@ -59,6 +59,9 @@ class provider implements
     /** @var string Event map table (system level, authorship only). */
     private const T_EVMAP = 'block_catquiz_statistics_eventmap';
 
+    /** @var string Model revision table (authorship via the model's context). */
+    private const T_REV = 'block_catquiz_statistics_evalrevision';
+
     /** @var string[] Tables with a usermodified authorship column and a contextid. */
     private const AUTHORED = [
         'block_catquiz_statistics_dataset',
@@ -104,7 +107,7 @@ class provider implements
         $collection->add_database_table('block_catquiz_statistics_demouser', [
             'userid' => 'privacy:metadata:demouser:userid',
         ], 'privacy:metadata:demouser');
-        foreach (array_merge(self::AUTHORED, [self::T_EVMAP, 'block_catquiz_statistics_demo']) as $table) {
+        foreach (array_merge(self::AUTHORED, [self::T_EVMAP, self::T_REV, 'block_catquiz_statistics_demo']) as $table) {
             $collection->add_database_table($table, [
                 'usermodified' => 'privacy:metadata:authored:usermodified',
             ], 'privacy:metadata:authored');
@@ -160,6 +163,12 @@ class provider implements
             $contextlist->add_from_sql('SELECT contextid FROM {' . $table . '} WHERE usermodified = :userid', $params);
         }
         $contextlist->add_from_sql(
+            'SELECT m.contextid FROM {block_catquiz_statistics_evalmodel} m
+               JOIN {' . self::T_REV . '} r ON r.modelid = m.id
+              WHERE r.usermodified = :userid',
+            $params
+        );
+        $contextlist->add_from_sql(
             'SELECT ctx.id FROM {context} ctx
               WHERE ctx.contextlevel = :syslevel
                 AND EXISTS (SELECT 1 FROM {' . self::T_EVMAP . '} em WHERE em.usermodified = :userid)',
@@ -191,6 +200,13 @@ class provider implements
                 $params
             );
         }
+        $userlist->add_from_sql(
+            'usermodified',
+            'SELECT r.usermodified FROM {' . self::T_REV . '} r
+               JOIN {block_catquiz_statistics_evalmodel} m ON m.id = r.modelid
+              WHERE m.contextid = :contextid',
+            $params
+        );
         if ($userlist->get_context()->contextlevel == CONTEXT_SYSTEM) {
             $userlist->add_from_sql('usermodified', 'SELECT usermodified FROM {' . self::T_EVMAP . '}', []);
         }
@@ -293,6 +309,13 @@ class provider implements
         foreach (self::AUTHORED as $table) {
             $DB->set_field($table, 'usermodified', 0, ['contextid' => $context->id]);
         }
+        $DB->set_field_select(
+            self::T_REV,
+            'usermodified',
+            0,
+            'modelid IN (SELECT id FROM {block_catquiz_statistics_evalmodel} WHERE contextid = :contextid)',
+            ['contextid' => $context->id]
+        );
         if ($context->contextlevel == CONTEXT_SYSTEM) {
             $DB->set_field(self::T_EVMAP, 'usermodified', 0);
         }
@@ -343,6 +366,13 @@ class provider implements
         foreach (self::AUTHORED as $table) {
             $DB->set_field_select($table, 'usermodified', 0, "contextid = :contextid AND usermodified $insql", $params);
         }
+        $DB->set_field_select(
+            self::T_REV,
+            'usermodified',
+            0,
+            "usermodified $insql AND modelid IN (SELECT id FROM {block_catquiz_statistics_evalmodel} WHERE contextid = :contextid)",
+            $params
+        );
         if ($context->contextlevel == CONTEXT_SYSTEM) {
             $DB->set_field_select(self::T_EVMAP, 'usermodified', 0, "usermodified $insql", $params);
         }

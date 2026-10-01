@@ -77,6 +77,15 @@ function block_catquiz_statistics_extend_navigation_course(
         null,
         'catquiz_statistics'
     );
+    if (has_capability('block/catquiz_statistics:viewanalytics', $context)) {
+        $reportsnode->add(
+            get_string('analytics:title', 'block_catquiz_statistics'),
+            new moodle_url('/blocks/catquiz_statistics/analytics.php', ['courseid' => $course->id]),
+            navigation_node::TYPE_SETTING,
+            null,
+            'catquiz_statistics_analytics'
+        );
+    }
 }
 
 /**

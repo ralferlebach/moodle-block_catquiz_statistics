@@ -15,3 +15,238 @@
 .block-catquiz-statistics-report {
     /* Phase 1: tables, filters, charts will be styled here. */
 }
+
+/* Learning-analytics workspaces (Issue #7). Five coverage states, each with its own fill. */
+.block_catquiz_statistics-la {
+    --la-reached: #1d6a96;
+    --la-negative: #9b2c55;
+    --la-notapplicable: #b9b4a8;
+    --la-unavailable: #8e959e;
+    --la-notobserved: #e6e9ed;
+    --la-synthetic: #f3c63f;
+}
+
+.block_catquiz_statistics-la .la-synthetic {
+    margin-bottom: 1rem;
+    padding: .6rem .9rem;
+    border-left: .5rem solid #1b1b1b;
+    background: repeating-linear-gradient(-45deg, var(--la-synthetic), var(--la-synthetic) 12px, #f7d978 12px, #f7d978 24px);
+    color: #1b1b1b;
+}
+
+.block_catquiz_statistics-la .la-synthetic strong {
+    margin-right: .5rem;
+    letter-spacing: .02em;
+}
+
+.block_catquiz_statistics-la .la-badge-synthetic {
+    background: var(--la-synthetic);
+    color: #1b1b1b;
+}
+
+.block_catquiz_statistics-la .la-version {
+    font-size: .8rem;
+    font-weight: normal;
+    color: #6a737b;
+}
+
+.block_catquiz_statistics-la .la-criterion + .la-criterion::before {
+    content: "\203A";
+    margin: 0 .4rem;
+    color: #6a737b;
+}
+
+.block_catquiz_statistics-la .la-coverage {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: .25rem 1rem;
+    max-width: 44rem;
+}
+
+.block_catquiz_statistics-la .la-coverage-row {
+    display: contents;
+}
+
+.block_catquiz_statistics-la .la-coverage dt {
+    font-weight: normal;
+}
+
+.block_catquiz_statistics-la .la-coverage dd {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.block_catquiz_statistics-la .la-meter {
+    display: inline-block;
+    width: 12rem;
+    height: .5rem;
+    background: var(--la-notobserved);
+}
+
+.block_catquiz_statistics-la .la-meter > span {
+    display: block;
+    height: 100%;
+    background: var(--la-reached);
+}
+
+.block_catquiz_statistics-la .la-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem 1.25rem;
+    padding: 0;
+    margin: 0 0 .75rem;
+    list-style: none;
+    font-size: .875rem;
+}
+
+.block_catquiz_statistics-la .la-swatch {
+    display: inline-block;
+    width: .9rem;
+    height: .9rem;
+    margin-right: .35rem;
+    vertical-align: -.1rem;
+}
+
+.block_catquiz_statistics-la .la-funnel {
+    padding-left: 1.75rem;
+    max-width: 60rem;
+}
+
+.block_catquiz_statistics-la .la-step {
+    margin-bottom: 1rem;
+}
+
+.block_catquiz_statistics-la .la-step::marker {
+    color: #6a737b;
+    font-variant-numeric: tabular-nums;
+}
+
+.block_catquiz_statistics-la .la-step-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: .25rem 1rem;
+}
+
+.block_catquiz_statistics-la .la-step-label {
+    font-weight: 600;
+}
+
+.block_catquiz_statistics-la .la-step-rate {
+    font-variant-numeric: tabular-nums;
+}
+
+.block_catquiz_statistics-la .la-bar {
+    display: flex;
+    height: 1.25rem;
+    margin-top: .25rem;
+    background: var(--la-notobserved);
+}
+
+.block_catquiz_statistics-la .la-step-def {
+    margin: .25rem 0 0;
+    font-size: .8rem;
+    color: #6a737b;
+}
+
+.block_catquiz_statistics-la .la-reached {
+    background: var(--la-reached);
+}
+
+.block_catquiz_statistics-la .la-negative {
+    background: var(--la-negative);
+}
+
+.block_catquiz_statistics-la .la-notapplicable {
+    background: var(--la-notapplicable);
+}
+
+.block_catquiz_statistics-la .la-unavailable {
+    background: repeating-linear-gradient(45deg, var(--la-unavailable), var(--la-unavailable) 3px, #c9cdd2 3px, #c9cdd2 6px);
+}
+
+.block_catquiz_statistics-la .la-notobserved {
+    background: var(--la-notobserved);
+    box-shadow: inset 0 0 0 1px #c9cdd2;
+}
+
+.block_catquiz_statistics-la .la-timeline {
+    list-style: none;
+    padding-left: 0;
+    border-left: 2px solid var(--la-notobserved);
+    max-width: 52rem;
+}
+
+.block_catquiz_statistics-la .la-timeline li {
+    position: relative;
+    padding: .15rem 0 .15rem 1rem;
+}
+
+.block_catquiz_statistics-la .la-timeline li::before {
+    content: "";
+    position: absolute;
+    left: -.35rem;
+    top: .55rem;
+    width: .6rem;
+    height: .6rem;
+    border-radius: 50%;
+    background: var(--la-reached);
+}
+
+.block_catquiz_statistics-la .la-timeline time {
+    display: inline-block;
+    min-width: 9.5rem;
+    color: #6a737b;
+    font-variant-numeric: tabular-nums;
+}
+
+.block_catquiz_statistics-la .la-timeline li.la-tl-course {
+    margin: .6rem 0 .2rem;
+    font-weight: 600;
+}
+
+.block_catquiz_statistics-la .la-timeline li.la-tl-course::before {
+    width: .9rem;
+    height: .9rem;
+    left: -.5rem;
+    top: .75rem;
+    border-radius: 0;
+    background: #4a5258;
+}
+
+.block_catquiz_statistics-la .la-tp {
+    padding: 0 .3rem;
+    border: 1px solid #c9cdd2;
+    font-size: .75rem;
+}
+
+.block_catquiz_statistics-la .la-tl-value {
+    margin-left: .4rem;
+    font-weight: 600;
+}
+
+.block_catquiz_statistics-la .la-plainlist {
+    padding-left: 1.1rem;
+}
+
+.block_catquiz_statistics-la .la-superseded td {
+    color: #6a737b;
+}
+
+.block_catquiz_statistics-la .la-empty {
+    padding: 1rem 0;
+    color: #4a5258;
+}
+
+@media (max-width: 576px) {
+    .block_catquiz_statistics-la .la-coverage {
+        grid-template-columns: 1fr;
+    }
+
+    .block_catquiz_statistics-la .la-meter {
+        width: 8rem;
+    }
+}

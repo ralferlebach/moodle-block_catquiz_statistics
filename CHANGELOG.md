@@ -6,7 +6,26 @@ versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.5.0] — Build 2026093004 (30.09.2026)
+## [0.5.0] — Build 2026100100 (01.10.2026)
+
+### Added (Build 2026100100) — Issue #7, Evaluationsmodell und Learning-Analytics-Dashboard
+- Auswertungs-Engine `analytics\evaluation`: `population` (Kriterien enrolled | enrolledat | hasobservation |
+  variablevalue | dataset, N nach jedem Kriterium), `coverage_state` (erreicht, beobachtet nein, nicht anwendbar,
+  nicht verfügbar, nicht beobachtet — nie „nicht beobachtet“ als negativ), `evaluation_service` (Kohortenübersicht
+  je Rolle ohne Score, Funnel mit explizitem Nenner je Schritt, rechtegefilterte kursübergreifende Timeline,
+  Performance-Paare, Reliable Change), `reliable_change` (Δ, SEdiff, 95-%-KI, RCI, dokumentierte Unabhängigkeitsannahme;
+  fehlender SE → nicht berechenbar), `model_templates` (7 generische Vorlagen).
+- Revisionssichere Modellversionen: Tabelle `evalrevision`, Snapshot je Version; Ergebnisse referenzieren die Modellversion.
+- Seite `analytics.php` mit Arbeitsbereichen Daten | Learning Analytics | Evaluationsmodell | Analyse und Link auf die
+  Detailberichte; Einstieg über Block-Button und Kursnavigation. Synthetik-Band bei Demo-Daten.
+- Deinstallations-Hook `db/uninstall.php`: entfernt alle Demo-Läufe, bevor die Registry-Tabellen verschwinden.
+
+### Fixed (Build 2026100100)
+- Demo-Benutzernamen enthalten die (dauerhaft eindeutige) Kurs-ID statt der Registry-ID — nach einer Neuinstallation
+  kollidierten sie sonst mit verwaisten Demo-Nutzern („Error writing to database“).
+- Demo-Evaluationsmodell entsteht als Version 1 (bisher eine Version je Rollenzuordnung).
+
+### Build 2026093004 (30.09.2026)
 
 ### Added (Build 2026093004) — Issue #9, synthetische Demo-Kohorte
 - `demo\rng` (mulberry32, eigener Zustand), `demo\scenario` (Profile balanced | highuptake_lowlearning |

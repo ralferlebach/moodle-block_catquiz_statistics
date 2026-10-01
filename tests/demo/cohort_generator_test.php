@@ -264,5 +264,45 @@ final class cohort_generator_test extends \advanced_testcase {
         foreach (['covariate', 'disposition', 'exposure', 'behaviour', 'performance', 'outcome'] as $role) {
             $this->assertArrayHasKey($role, $roles, $role);
         }
+        $this->assertSame(1, (int) $model->version, 'The initial demo model is one version, not one per mapping.');
+        $revision = (new \block_catquiz_statistics\repository\evalmodel_repository())->get_revision((int) $model->id);
+        $this->assertSame(array_sum($roles), count($revision['roles']));
+        $this->assertNotEmpty($revision['config']['transitions']);
+    }
+
+    /**
+     * Usernames stay unique even when the registry was lost (e.g. reinstall) and ids restart.
+     *
+     * @return void
+     */
+    public function test_usernames_unique_after_registry_loss(): void {
+        global $DB;
+        $gen = new cohort_generator();
+        $gen->generate(2026, 4, 'balanced');
+        $DB->delete_records(cohort_generator::TABLE_USER);
+        $DB->delete_records(cohort_generator::TABLE);
+        $id = $gen->generate(2026, 4, 'balanced');
+        $this->assertGreaterThan(0, $id);
+        $this->assertSame(8, $DB->count_records_select('user', "username LIKE 'synthdemo%' AND deleted = 0"));
+    }
+
+    /**
+     * The uninstall hook removes all registered demo cohorts incl. users and courses.
+     *
+     * @return void
+     */
+    public function test_uninstall_hook_removes_demo_runs(): void {
+        global $DB, $CFG;
+        require_once($CFG->dirroot . '/blocks/catquiz_statistics/db/uninstall.php');
+        $gen = new cohort_generator();
+        $gen->generate(1, 3, 'balanced');
+        $gen->generate(2, 3, 'mixed');
+        $real = $this->getDataGenerator()->create_course();
+
+        $this->assertTrue(xmldb_block_catquiz_statistics_uninstall());
+
+        $this->assertSame(0, $DB->count_records_select('user', "username LIKE 'synthdemo%' AND deleted = 0"));
+        $this->assertSame(0, $DB->count_records_select('course', "shortname LIKE 'synthdemo-%'"));
+        $this->assertTrue($DB->record_exists('course', ['id' => $real->id]));
     }
 }
