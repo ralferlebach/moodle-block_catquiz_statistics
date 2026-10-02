@@ -6,7 +6,31 @@ versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [0.5.0] — Build 2026100100 (01.10.2026)
+## [0.5.0] — Build 2026100101 (01.10.2026)
+
+### Added (Build 2026100101) — Issue #8, Statistik-Engine und Forschungsdatenexport
+- `stats\distribution` (Normal-, t-, χ²-, F-Verteilung über regularisierte unvollständige Gamma-/Betafunktion),
+  `stats\matrix`, `stats\descriptive` (Quantile Typ 7 wie R), `stats\design` (Listwise Deletion mit N vor/nach,
+  Treatment-Kodierung wie R, numerische Interaktionen), `stats\linear_regression` (B, SE, t, p, 95-%-KI, β, R²,
+  adj. R², AIC/BIC, Residuen, Cook's D > 4/N als Hinweis, VIF), `stats\logistic_regression` (IRLS exakt wie R glm.fit,
+  OR mit Wald-KI, Deviance, AIC/BIC, McFadden/Nagelkerke, Warnungen bei Nichtkonvergenz/Separation),
+  `stats\model_sequence` (verschachtelte Modelle auf gemeinsamer Stichprobe, ΔR² mit F-Change bzw. LR-Test),
+  `stats\path_model` (Pfadanalyse beobachteter Variablen, direkte/indirekte/totale Effekte, Bootstrap-KI mit Seed,
+  Warnung bei N < 50, Abweisung zyklischer Modelle).
+- R-Referenzvalidierung: `tests/fixtures/stats/reference.R` erzeugt Daten und 83 Referenzwerte; alle Tests mit
+  Toleranz 1e-9 relativ (tatsächliche Abweichung ≤ 5e-15).
+- `research\pseudonymiser` (stabil: HMAC-SHA256 je Scope; exportbezogen: unverknüpfbar; Klartext nur mit neuer
+  Capability `exportidentified`), `research\dataset_builder` (Wide je Modell-Mapping, Long mit Provenienz und Rolle),
+  `research\export_bundle` (data_long.csv, data_wide.csv, codebook.csv, manifest.json; ZIP).
+
+### Fixed (Build 2026100101) — CI
+- Workflows: PHPUnit-/Behat-Init versionsunabhängig (`public/admin` ab Moodle 5.1).
+- Template: `<time>` mit `datetime`-Attribut (Mustache-HTML-Validierung).
+- `phpunit.xml`: Projektdatei wiederhergestellt (war lokal durch Moodles generierte Komponenten-Config überschrieben).
+- Lokal nachgestellt mit moodle-plugin-ci 4.5.11: Moodle 4.5/pgsql und 5.1/pgsql installieren ohne Warnung,
+  PHPUnit 193 grün (`--fail-on-warning`); phplint, phpcs, phpdoc, validate, savepoints, mustache, grunt grün.
+
+### Build 2026100100 (01.10.2026)
 
 ### Added (Build 2026100100) — Issue #7, Evaluationsmodell und Learning-Analytics-Dashboard
 - Auswertungs-Engine `analytics\evaluation`: `population` (Kriterien enrolled | enrolledat | hasobservation |

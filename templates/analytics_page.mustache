@@ -39,7 +39,7 @@
         "canviewdetails": true,
         "persons": [{"id": 5, "name": "Synthetic Demo 0001", "selected": true}],
         "hastimeline": true, "selectedname": "Synthetic Demo 0001",
-        "timeline": [{"coursechange": true, "time": "1/09/26, 10:00", "label": "Test: started", "timepoint": "",
+        "timeline": [{"coursechange": true, "time": "1/09/26, 10:00", "isotime": "2026-09-01T10:00:00Z", "label": "Test: started", "timepoint": "",
             "value": "", "course": "Mathematik 1", "synthetic": true}]
     }
 }}
@@ -209,7 +209,7 @@
         <ol class="la-timeline" aria-label="{{selectedname}}">
             {{#timeline}}
             {{#coursechange}}<li class="la-tl-course">{{course}}</li>{{/coursechange}}
-            <li><time>{{time}}</time> <span class="la-tl-label">{{label}}</span>{{#timepoint}} <span class="la-tp">{{timepoint}}</span>{{/timepoint}}
+            <li><time datetime="{{isotime}}">{{time}}</time> <span class="la-tl-label">{{label}}</span>{{#timepoint}} <span class="la-tp">{{timepoint}}</span>{{/timepoint}}
                 {{#value}}<span class="la-tl-value">{{value}}</span>{{/value}}</li>
             {{/timeline}}
         </ol>

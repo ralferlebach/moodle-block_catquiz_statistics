@@ -14,24 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace block_catquiz_statistics\stats;
+
 /**
- * Plugin version definition for block_catquiz_statistics.
+ * Raised when a model matrix is singular (perfect collinearity, constant predictor, too few cases).
  *
  * @package    block_catquiz_statistics
- * @copyright  2025 Ralf Erlebach
+ * @copyright  2026 Ralf Erlebach
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component    = 'block_catquiz_statistics';
-$plugin->version      = 2026100101;
-$plugin->requires     = 2024100700;   // Moodle 4.5.
-$plugin->supported    = [405, 405];   // Tested on Moodle 4.5; extend after 5.x testing.
-$plugin->maturity     = MATURITY_ALPHA;
-$plugin->release      = '0.5.0';
-$plugin->dependencies = [
-    'local_catquiz'          => 2024120500,
-    'mod_adaptivequiz'       => 2024031502,
-    'local_wunderbyte_table' => 2024040200,
-];
+class singular_matrix_exception extends \moodle_exception {
+    /**
+     * Constructor.
+     */
+    public function __construct() {
+        parent::__construct('stats:error:singular', 'block_catquiz_statistics');
+    }
+}

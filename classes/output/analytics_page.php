@@ -217,6 +217,7 @@ class analytics_page implements \renderable, \templatable {
                 'coursechange' => $cid !== $previous,
                 'time' => $obs->get_sorttime()
                     ? userdate($obs->get_sorttime(), get_string('strftimedatetimeshort', 'langconfig')) : '–',
+                'isotime' => $obs->get_sorttime() ? gmdate('Y-m-d\TH:i:s\Z', $obs->get_sorttime()) : '',
                 'label' => $labeller->label($obs->variablekey),
                 'timepoint' => $obs->timepoint,
                 'value' => $this->format_value($obs),

@@ -33,6 +33,7 @@
  *   importdata     – import datasets (surveys, demographics, outcomes) (RISK_PERSONAL).
  *   viewanalyses   – run and view descriptive/regression/path analyses (RISK_PERSONAL).
  *   managedemo     – generate and reset synthetic demo cohorts (admin only, setting-gated).
+ *   exportidentified – research export with plain user ids instead of pseudonyms (manager only).
  *   addinstance  – place the block on a course page.
  *
  * @package    block_catquiz_statistics
@@ -166,5 +167,14 @@ $capabilities = [
         'captype'      => 'write',
         'contextlevel' => CONTEXT_SYSTEM,
         'archetypes'   => [],
+    ],
+    // Research export with plain Moodle user ids instead of pseudonyms. Explicit, justified use only.
+    'block/catquiz_statistics:exportidentified' => [
+        'riskbitmask'  => RISK_PERSONAL,
+        'captype'      => 'read',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes'   => [
+            'manager' => CAP_ALLOW,
+        ],
     ],
 ];
