@@ -251,7 +251,187 @@
     {{/ismodel}}
 
     {{#isanalysis}}
-    <p class="la-empty">{{#str}}analysis:upcoming, block_catquiz_statistics{{/str}}</p>
+    {{#analysisdenied}}<p class="la-empty">{{#str}}analysis:denied, block_catquiz_statistics{{/str}}</p>{{/analysisdenied}}
+    {{#analysisallowed}}
+    <p class="small text-muted la-reference">{{reference}}</p>
+    <p class="la-notice" role="note">{{#str}}analysis:noncausal, block_catquiz_statistics{{/str}}</p>
+
+    <section class="mb-4" aria-labelledby="la-desc">
+        <h3 id="la-desc" class="h5">{{#str}}analysis:descriptives, block_catquiz_statistics{{/str}}</h3>
+        {{#numeric.0}}
+        <div class="table-responsive">
+        <table class="table table-sm la-table la-num">
+            <thead><tr>
+                <th scope="col">{{#str}}model:variable, block_catquiz_statistics{{/str}}</th>
+                <th scope="col">{{#str}}analysis:role, block_catquiz_statistics{{/str}}</th>
+                <th scope="col">N</th><th scope="col">{{#str}}analysis:missing, block_catquiz_statistics{{/str}}</th>
+                <th scope="col">M</th><th scope="col">SD</th><th scope="col">Md</th><th scope="col">IQR</th>
+                <th scope="col">Min</th><th scope="col">Max</th>
+            </tr></thead>
+            <tbody>{{#numeric}}<tr><th scope="row">{{label}} <code class="small">{{column}}</code></th><td>{{role}}</td><td>{{n}}</td>
+                <td>{{missing}} ({{missingpct}} %)</td><td>{{mean}}</td><td>{{sd}}</td><td>{{median}}</td><td>{{iqr}}</td>
+                <td>{{min}}</td><td>{{max}}</td></tr>{{/numeric}}</tbody>
+        </table>
+        </div>
+        {{/numeric.0}}
+        {{#categorical.0}}
+        <div class="table-responsive">
+        <table class="table table-sm la-table">
+            <thead><tr><th scope="col">{{#str}}model:variable, block_catquiz_statistics{{/str}}</th>
+                <th scope="col">{{#str}}analysis:role, block_catquiz_statistics{{/str}}</th><th scope="col">N</th>
+                <th scope="col">{{#str}}analysis:missing, block_catquiz_statistics{{/str}}</th>
+                <th scope="col">{{#str}}analysis:frequencies, block_catquiz_statistics{{/str}}</th></tr></thead>
+            <tbody>{{#categorical}}<tr><th scope="row">{{label}} <code class="small">{{column}}</code></th><td>{{role}}</td><td>{{n}}</td>
+                <td>{{missing}} ({{missingpct}} %)</td><td>{{frequencies}}</td></tr>{{/categorical}}</tbody>
+        </table>
+        </div>
+        {{/categorical.0}}
+    </section>
+
+    <section class="mb-4" aria-labelledby="la-reg">
+        <h3 id="la-reg" class="h5">{{#str}}analysis:regression, block_catquiz_statistics{{/str}}</h3>
+        <form method="get" action="{{actionurl}}" class="la-form">
+            <input type="hidden" name="courseid" value="{{courseid}}">
+            <input type="hidden" name="workspace" value="analysis">
+            <input type="hidden" name="modelid" value="{{model.modelid}}">
+            <input type="hidden" name="atype" value="regression">
+            <div class="la-form-grid">
+                <label for="la-outcome">{{#str}}analysis:outcome, block_catquiz_statistics{{/str}}</label>
+                <select id="la-outcome" name="outcome" class="custom-select form-select">
+                    {{#numericcolumns}}<option value="{{column}}" {{#outcomeselected}}selected{{/outcomeselected}}>{{label}} ({{role}})</option>{{/numericcolumns}}
+                </select>
+                <label for="la-predictors">{{#str}}analysis:predictors, block_catquiz_statistics{{/str}}</label>
+                <select id="la-predictors" name="predictors[]" multiple size="6" class="custom-select form-select">
+                    {{#columns}}<option value="{{column}}" {{#predictorselected}}selected{{/predictorselected}}>{{label}} ({{role}})</option>{{/columns}}
+                </select>
+                <label for="la-covariates">{{#str}}analysis:covariates, block_catquiz_statistics{{/str}}</label>
+                <select id="la-covariates" name="covariates[]" multiple size="4" class="custom-select form-select">
+                    {{#columns}}<option value="{{column}}" {{#covariateselected}}selected{{/covariateselected}}>{{label}} ({{role}})</option>{{/columns}}
+                </select>
+                <label for="la-rtype">{{#str}}analysis:type, block_catquiz_statistics{{/str}}</label>
+                <select id="la-rtype" name="rtype" class="custom-select form-select w-auto">
+                    <option value="auto" {{#rtypeauto}}selected{{/rtypeauto}}>{{#str}}analysis:type:auto, block_catquiz_statistics{{/str}}</option>
+                    <option value="linear" {{#rtypelinear}}selected{{/rtypelinear}}>{{#str}}analysis:type:linear, block_catquiz_statistics{{/str}}</option>
+                    <option value="logistic" {{#rtypelogistic}}selected{{/rtypelogistic}}>{{#str}}analysis:type:logistic, block_catquiz_statistics{{/str}}</option>
+                </select>
+            </div>
+            <div class="form-check my-2">
+                <input class="form-check-input" type="checkbox" name="sequence" value="1" id="la-sequence" {{#sequencechecked}}checked{{/sequencechecked}}>
+                <label class="form-check-label" for="la-sequence">{{#str}}analysis:sequence, block_catquiz_statistics{{/str}}</label>
+            </div>
+            <button type="submit" class="btn btn-primary">{{#str}}analysis:compute, block_catquiz_statistics{{/str}}</button>
+        </form>
+        {{#regression}}
+        <div class="la-result mt-3">
+            {{#error}}<div class="alert alert-warning">{{error}}</div>{{/error}}
+            {{#rows.0}}
+            <p class="mb-1">{{#str}}analysis:nline, block_catquiz_statistics, {"n": {{n}}, "total": {{ntotal}}, "excluded": {{excluded}} }{{/str}}</p>
+            <div class="table-responsive">
+            <table class="table table-sm la-table la-num">
+                <thead><tr><th scope="col">{{#str}}analysis:term, block_catquiz_statistics{{/str}}</th><th scope="col">B</th>
+                    <th scope="col">SE</th><th scope="col">{{#str}}analysis:ci, block_catquiz_statistics{{/str}}</th><th scope="col">p</th>
+                    {{#logistic}}<th scope="col">OR</th><th scope="col">{{#str}}analysis:orci, block_catquiz_statistics{{/str}}</th>{{/logistic}}
+                    {{^logistic}}<th scope="col">β</th><th scope="col">VIF</th>{{/logistic}}</tr></thead>
+                <tbody>{{#rows}}<tr><th scope="row">{{term}}</th><td>{{b}}</td><td>{{se}}</td><td>{{ci}}</td><td>{{p}}</td>
+                    <td>{{beta}}</td>{{#orci}}<td>{{orci}}</td>{{/orci}}{{^orci}}<td>{{vif}}</td>{{/orci}}</tr>{{/rows}}</tbody>
+            </table>
+            </div>
+            <p class="mb-1">{{fitline}}</p>
+            {{#diagnostics}}<p class="small text-muted">{{diagnostics}}</p>{{/diagnostics}}
+            {{#warnings}}<div class="alert alert-warning py-1">{{.}}</div>{{/warnings}}
+            {{#sequence.0}}
+            <h4 class="h6 mt-3">{{#str}}analysis:sequenceresult, block_catquiz_statistics{{/str}}</h4>
+            <table class="table table-sm w-auto la-table la-num">
+                <thead><tr><th scope="col">M</th><th scope="col" class="la-txt">{{#str}}analysis:predictors, block_catquiz_statistics{{/str}}</th>
+                    <th scope="col">R²</th><th scope="col">{{#str}}analysis:change, block_catquiz_statistics{{/str}}</th></tr></thead>
+                <tbody>{{#sequence}}<tr><td>{{step}}</td><td class="la-txt">{{predictors}}</td><td>{{r2}}</td><td>{{change}}</td></tr>{{/sequence}}</tbody>
+            </table>
+            <p class="small text-muted">{{#str}}analysis:sequencenote, block_catquiz_statistics{{/str}}</p>
+            {{/sequence.0}}
+            {{/rows.0}}
+        </div>
+        {{/regression}}
+    </section>
+
+    <section class="mb-4" aria-labelledby="la-path">
+        <h3 id="la-path" class="h5">{{#str}}analysis:path, block_catquiz_statistics{{/str}}</h3>
+        <form method="get" action="{{actionurl}}" class="la-form">
+            <input type="hidden" name="courseid" value="{{courseid}}">
+            <input type="hidden" name="workspace" value="analysis">
+            <input type="hidden" name="modelid" value="{{model.modelid}}">
+            <input type="hidden" name="atype" value="path">
+            <label for="la-syntax">{{#str}}analysis:equations, block_catquiz_statistics{{/str}}</label>
+            <textarea id="la-syntax" name="syntax" rows="4" class="form-control la-code" spellcheck="false">{{syntax}}</textarea>
+            <p class="small text-muted mt-1 mb-2">{{#str}}analysis:syntaxhelp, block_catquiz_statistics{{/str}}
+                {{#numericcolumns}}<code>{{column}}</code> {{/numericcolumns}}</p>
+            <div class="d-flex flex-wrap align-items-end">
+                <label class="me-2 mr-2 mb-0" for="la-bootstrap">{{#str}}analysis:bootstrap, block_catquiz_statistics{{/str}}</label>
+                <input id="la-bootstrap" type="number" name="bootstrap" min="0" max="2000" value="{{bootstrap}}" class="form-control w-auto me-3 mr-3">
+                <label class="me-2 mr-2 mb-0" for="la-seed">Seed</label>
+                <input id="la-seed" type="number" name="seed" value="{{seed}}" class="form-control w-auto me-3 mr-3">
+                <button type="submit" class="btn btn-primary">{{#str}}analysis:compute, block_catquiz_statistics{{/str}}</button>
+            </div>
+        </form>
+        {{#path}}
+        <div class="la-result mt-3">
+            {{#error}}<div class="alert alert-warning">{{error}}</div>{{/error}}
+            {{#svg}}
+            <p class="mb-1">{{#str}}analysis:nline, block_catquiz_statistics, {"n": {{n}}, "total": {{ntotal}}, "excluded": {{excluded}} }{{/str}}</p>
+            <figure class="la-figure">{{{svg}}}<figcaption class="small text-muted">{{#str}}analysis:diagramcaption, block_catquiz_statistics{{/str}}</figcaption></figure>
+            <div class="table-responsive">
+            <table class="table table-sm la-table la-num">
+                <thead><tr><th scope="col">{{#str}}analysis:from, block_catquiz_statistics{{/str}}</th>
+                    <th scope="col" class="la-txt">{{#str}}analysis:to, block_catquiz_statistics{{/str}}</th><th scope="col">B</th><th scope="col">β</th>
+                    <th scope="col">SE</th><th scope="col">{{#str}}analysis:ci, block_catquiz_statistics{{/str}}</th><th scope="col">p</th></tr></thead>
+                <tbody>{{#paths}}<tr><td class="la-txt">{{from}}</td><td class="la-txt">{{to}}</td><td>{{b}}</td><td>{{beta}}</td><td>{{se}}</td><td>{{ci}}</td>
+                    <td>{{p}}</td></tr>{{/paths}}</tbody>
+            </table>
+            </div>
+            <p class="mb-1">{{#r2}}<span class="me-3 mr-3">R² {{variable}} = {{r2}}</span>{{/r2}}</p>
+            {{#effects.0}}
+            <h4 class="h6 mt-3">{{#str}}analysis:effects, block_catquiz_statistics{{/str}}</h4>
+            <table class="table table-sm w-auto la-table la-num">
+                <thead><tr><th scope="col">{{#str}}analysis:from, block_catquiz_statistics{{/str}}</th>
+                    <th scope="col" class="la-txt">{{#str}}analysis:to, block_catquiz_statistics{{/str}}</th>
+                    <th scope="col">{{#str}}analysis:direct, block_catquiz_statistics{{/str}}</th>
+                    <th scope="col">{{#str}}analysis:indirect, block_catquiz_statistics{{/str}}</th>
+                    <th scope="col">{{#str}}analysis:bootci, block_catquiz_statistics{{/str}}</th>
+                    <th scope="col">{{#str}}analysis:total, block_catquiz_statistics{{/str}}</th></tr></thead>
+                <tbody>{{#effects}}<tr><td class="la-txt">{{from}}</td><td class="la-txt">{{to}}</td><td>{{direct}}</td><td>{{indirect}}</td><td>{{bootci}}</td>
+                    <td>{{total}}</td></tr>{{/effects}}</tbody>
+            </table>
+            {{/effects.0}}
+            {{#bootstrapinfo}}<p class="small text-muted">{{bootstrapinfo}}</p>{{/bootstrapinfo}}
+            {{#warnings}}<div class="alert alert-warning py-1">{{.}}</div>{{/warnings}}
+            {{/svg}}
+        </div>
+        {{/path}}
+    </section>
+
+    {{#canexport}}
+    <section class="mb-4" aria-labelledby="la-export">
+        <h3 id="la-export" class="h5">{{#str}}analysis:export, block_catquiz_statistics{{/str}}</h3>
+        <form method="post" action="{{exporturl}}" class="la-form">
+            <input type="hidden" name="sesskey" value="{{sesskey}}">
+            <input type="hidden" name="courseid" value="{{courseid}}">
+            <input type="hidden" name="modelid" value="{{model.modelid}}">
+            <fieldset>
+                <legend class="h6">{{#str}}analysis:pseudonymisation, block_catquiz_statistics{{/str}}</legend>
+                <div class="form-check"><input class="form-check-input" type="radio" name="mode" value="stable" id="la-m-stable" checked>
+                    <label class="form-check-label" for="la-m-stable">{{#str}}analysis:mode:stable, block_catquiz_statistics{{/str}}</label></div>
+                <div class="form-check"><input class="form-check-input" type="radio" name="mode" value="export" id="la-m-export">
+                    <label class="form-check-label" for="la-m-export">{{#str}}analysis:mode:export, block_catquiz_statistics{{/str}}</label></div>
+                {{#canexportidentified}}
+                <div class="form-check"><input class="form-check-input" type="radio" name="mode" value="identified" id="la-m-identified">
+                    <label class="form-check-label" for="la-m-identified">{{#str}}analysis:mode:identified, block_catquiz_statistics{{/str}}</label></div>
+                {{/canexportidentified}}
+            </fieldset>
+            <p class="small text-muted my-2">{{#str}}export:notice, block_catquiz_statistics{{/str}}</p>
+            <button type="submit" class="btn btn-secondary">{{#str}}analysis:download, block_catquiz_statistics{{/str}}</button>
+        </form>
+    </section>
+    {{/canexport}}
+    {{/analysisallowed}}
     {{/isanalysis}}
     {{/hasmodel}}
 </div>

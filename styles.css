@@ -250,3 +250,95 @@
         width: 8rem;
     }
 }
+
+/* Analysis workspace (Issue #8). */
+.block_catquiz_statistics-la .la-num td,
+.block_catquiz_statistics-la .la-num th[scope="col"] {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.block_catquiz_statistics-la .la-num td.la-txt,
+.block_catquiz_statistics-la .la-num th.la-txt[scope="col"],
+.block_catquiz_statistics-la .la-num th[scope="col"]:first-child {
+    text-align: left;
+    white-space: normal;
+}
+
+.block_catquiz_statistics-la .la-num th[scope="row"] {
+    font-weight: normal;
+}
+
+.block_catquiz_statistics-la .la-notice {
+    padding: .5rem .75rem;
+    border-left: .25rem solid #6a737b;
+    background: #f4f5f7;
+    font-size: .9rem;
+}
+
+.block_catquiz_statistics-la .la-form-grid {
+    display: grid;
+    grid-template-columns: max-content minmax(14rem, 32rem);
+    gap: .5rem 1rem;
+    align-items: start;
+}
+
+.block_catquiz_statistics-la .la-code {
+    font-family: SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    max-width: 40rem;
+}
+
+.block_catquiz_statistics-la .la-figure {
+    max-width: 60rem;
+    margin: .5rem 0 1rem;
+}
+
+.block_catquiz_statistics-la .la-pathdiagram {
+    width: 100%;
+    height: auto;
+    font-size: 12px;
+}
+
+.block_catquiz_statistics-la .la-node rect {
+    fill: #fff;
+    stroke: #4a5258;
+    stroke-width: 1.2;
+}
+
+.block_catquiz_statistics-la .la-node-endo rect {
+    fill: #eef4f8;
+    stroke: var(--la-reached);
+}
+
+.block_catquiz_statistics-la .la-node text {
+    fill: #1d2125;
+}
+
+.block_catquiz_statistics-la .la-edge {
+    stroke: #8e959e;
+    stroke-width: 1.4;
+}
+
+.block_catquiz_statistics-la .la-edge-sig {
+    stroke: var(--la-reached);
+    stroke-width: 2.2;
+}
+
+.block_catquiz_statistics-la .la-arrowhead {
+    fill: #4a5258;
+}
+
+.block_catquiz_statistics-la .la-edgelabel {
+    fill: #1d2125;
+    font-variant-numeric: tabular-nums;
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+}
+
+@media (max-width: 576px) {
+    .block_catquiz_statistics-la .la-form-grid {
+        grid-template-columns: 1fr;
+    }
+}

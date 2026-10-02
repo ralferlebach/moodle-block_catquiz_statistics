@@ -128,7 +128,7 @@ final class path_model {
      *
      * @param array $coef from => [to => b]
      * @param array $equations Equations.
-     * @return array "from->to" => [from, to, direct, indirect, total, paths]
+     * @return array "from->to" => [from, to, hasdirect, direct, indirect, total, routes]
      */
     private static function effects(array $coef, array $equations): array {
         $nodes = array_unique(array_merge(array_keys($equations), ...array_values($equations)));
@@ -155,7 +155,8 @@ final class path_model {
                         $routes[] = ['path' => $path, 'product' => $prod];
                     }
                 }
-                $result[$from . '->' . $to] = ['from' => $from, 'to' => $to, 'direct' => $direct, 'indirect' => $indirect,
+                $result[$from . '->' . $to] = ['from' => $from, 'to' => $to, 'hasdirect' => isset($coef[$from][$to]),
+                    'direct' => $direct, 'indirect' => $indirect,
                     'total' => $direct + $indirect, 'routes' => $routes];
             }
         }

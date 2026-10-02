@@ -34,6 +34,17 @@ $courseid = required_param('courseid', PARAM_INT);
 $workspace = optional_param('workspace', 'analytics', PARAM_ALPHA);
 $modelid = optional_param('modelid', 0, PARAM_INT);
 $userid = optional_param('userid', 0, PARAM_INT);
+$analysis = [
+    'type' => optional_param('atype', '', PARAM_ALPHA),
+    'outcome' => optional_param('outcome', '', PARAM_ALPHANUMEXT),
+    'predictors' => optional_param_array('predictors', [], PARAM_ALPHANUMEXT),
+    'covariates' => optional_param_array('covariates', [], PARAM_ALPHANUMEXT),
+    'rtype' => optional_param('rtype', 'auto', PARAM_ALPHA),
+    'sequence' => optional_param('sequence', 0, PARAM_BOOL),
+    'syntax' => \core_text::substr(optional_param('syntax', '', PARAM_TEXT), 0, 2000),
+    'bootstrap' => optional_param('bootstrap', 1000, PARAM_INT),
+    'seed' => optional_param('seed', 2026, PARAM_INT),
+];
 
 $course = get_course($courseid);
 require_login($course);
@@ -58,7 +69,7 @@ echo $OUTPUT->header();
 echo $OUTPUT->heading($title);
 echo $OUTPUT->render_from_template(
     'block_catquiz_statistics/analytics_page',
-    (new analytics_page($course, $workspace, $modelid, $canviewdetails ? $userid : 0, $canviewdetails))
+    (new analytics_page($course, $workspace, $modelid, $canviewdetails ? $userid : 0, $canviewdetails, $analysis))
         ->export_for_template($OUTPUT)
 );
 echo $OUTPUT->footer();

@@ -23,6 +23,10 @@ use block_catquiz_statistics\analytics\evaluation\evaluation_service;
 use block_catquiz_statistics\analytics\key_labeller;
 use block_catquiz_statistics\analytics\observation;
 use block_catquiz_statistics\repository\evalmodel_repository;
+use block_catquiz_statistics\research\analysis_runner;
+use block_catquiz_statistics\research\dataset_builder;
+use block_catquiz_statistics\research\path_diagram;
+use block_catquiz_statistics\research\pseudonymiser;
 
 /**
  * Learning-analytics workspace page: Data, Learning Analytics, Evaluation model, Analysis (Issue #7).
@@ -43,6 +47,8 @@ class analytics_page implements \renderable, \templatable {
      * @param int $modelid Selected model (0 = first of the course).
      * @param int $userid Selected person for the timeline (0 = none).
      * @param bool $canviewdetails Viewer may see person-level data in this course.
+     * @param array $analysis Analysis request (type, outcome, predictors, covariates, rtype, sequence, syntax,
+     *                        bootstrap, seed).
      */
     public function __construct(
         /** @var \stdClass Course. */
@@ -55,6 +61,8 @@ class analytics_page implements \renderable, \templatable {
         private readonly int $userid,
         /** @var bool Person-level access. */
         private readonly bool $canviewdetails,
+        /** @var array Analysis request. */
+        private readonly array $analysis = [],
     ) {
     }
 
@@ -114,6 +122,8 @@ class analytics_page implements \renderable, \templatable {
             $data += $this->export_dashboard($svc, $population['userids']);
         } else if ($this->workspace === 'model') {
             $data += $this->export_model($svc, $modelid);
+        } else if ($this->workspace === 'analysis') {
+            $data += $this->export_analysis($modelid, $population['userids'], $svc->get_reference());
         }
         return $data;
     }
@@ -228,6 +238,219 @@ class analytics_page implements \renderable, \templatable {
         }
         return ['persons' => $persons, 'timeline' => $items, 'hastimeline' => !empty($items),
             'selectedname' => fullname($users[$selected])];
+    }
+
+    /**
+     * Analysis workspace: descriptives, regression, path model, research export (Issue #8).
+     *
+     * @param int $modelid Model id.
+     * @param int[] $userids Population.
+     * @param array $reference Model reference.
+     * @return array
+     */
+    private function export_analysis(int $modelid, array $userids, array $reference): array {
+        $ctx = \context_course::instance($this->course->id);
+        $str = static fn(string $id, $a = null) => get_string($id, 'block_catquiz_statistics', $a);
+        if (!has_capability('block/catquiz_statistics:viewanalyses', $ctx)) {
+            return ['analysisdenied' => true];
+        }
+        $builder = new dataset_builder($modelid);
+        $wide = $builder->wide($userids, new pseudonymiser('export', 'view'));
+        $runner = new analysis_runner($wide['columns'], array_values($wide['values']));
+        $plugin = \core_plugin_manager::instance()->get_plugin_info('block_catquiz_statistics');
+        $req = $this->analysis;
+
+        $numeric = [];
+        $categorical = [];
+        foreach ($runner->describe() as $d) {
+            $base = ['label' => $d['label'], 'column' => $d['column'], 'role' => $str('role:' . $d['role']),
+                'n' => $d['n'], 'missing' => $d['missing'], 'missingpct' => self::f($d['missingpct'], 1)];
+            if ($d['kind'] === 'numeric') {
+                $numeric[] = $base + ['mean' => self::f($d['mean']), 'sd' => self::f($d['sd']), 'median' => self::f($d['median']),
+                    'iqr' => self::f($d['iqr']), 'min' => self::f($d['min']), 'max' => self::f($d['max'])];
+            } else {
+                $freq = [];
+                foreach ($d['frequencies'] as $value => $f) {
+                    $freq[] = s($value) . ' ' . $f['n'] . ' (' . self::f($f['pct'], 1) . ' %)';
+                }
+                $categorical[] = $base + ['frequencies' => implode(' · ', $freq)];
+            }
+        }
+
+        $columns = array_map(fn($c) => ['column' => $c['column'], 'label' => $c['label'],
+            'role' => $str('role:' . $c['role']), 'numeric' => $runner->is_numeric($c['column']),
+            'outcomeselected' => ($req['outcome'] ?? '') === $c['column'],
+            'predictorselected' => in_array($c['column'], $req['predictors'] ?? [], true),
+            'covariateselected' => in_array($c['column'], $req['covariates'] ?? [], true)], $wide['columns']);
+
+        $data = [
+            'analysisallowed' => true,
+            'reference' => $str('analysis:reference', (object) ['model' => format_string($reference['name']),
+                'version' => $reference['version'], 'n' => count($userids), 'release' => $plugin->release,
+                'build' => $plugin->versiondisk, 'time' => userdate(time(), get_string('strftimedatetimeshort', 'langconfig'))]),
+            'numeric' => $numeric,
+            'categorical' => $categorical,
+            'columns' => array_values($columns),
+            'numericcolumns' => array_values(array_filter($columns, static fn($c) => $c['numeric'])),
+            'rtypeauto' => ($req['rtype'] ?? 'auto') === 'auto',
+            'rtypelinear' => ($req['rtype'] ?? '') === 'linear',
+            'rtypelogistic' => ($req['rtype'] ?? '') === 'logistic',
+            'sequencechecked' => !empty($req['sequence']),
+            'syntax' => $req['syntax'] ?? '',
+            'bootstrap' => (int) ($req['bootstrap'] ?? 1000),
+            'seed' => (int) ($req['seed'] ?? 2026),
+            'canexportidentified' => has_capability('block/catquiz_statistics:exportidentified', $ctx),
+            'canexport' => \block_catquiz_statistics\access::has_export($ctx),
+            'exporturl' => (new \moodle_url('/blocks/catquiz_statistics/export.php'))->out(false),
+            'sesskey' => sesskey(),
+        ];
+        $labels = array_column($wide['columns'], 'label', 'column');
+        if (($req['type'] ?? '') === 'regression' && !empty($req['outcome'])) {
+            $data['regression'] = $this->export_regression($runner->regression(
+                $req['outcome'],
+                $req['predictors'] ?? [],
+                $req['covariates'] ?? [],
+                $req['rtype'] ?? 'auto',
+                !empty($req['sequence'])
+            ), $labels);
+        }
+        if (($req['type'] ?? '') === 'path' && trim($req['syntax'] ?? '') !== '') {
+            $data['path'] = $this->export_path(
+                $runner->path($req['syntax'], (int) ($req['bootstrap'] ?? 0), (int) ($req['seed'] ?? 1)),
+                $labels
+            );
+        }
+        return $data;
+    }
+
+    /**
+     * Regression result for the template.
+     *
+     * @param array $r Runner result.
+     * @param array $labels column => label
+     * @return array
+     */
+    private function export_regression(array $r, array $labels): array {
+        if (!$r['ok']) {
+            return ['error' => $r['error']];
+        }
+        $fit = $r['fit'];
+        $logistic = $r['type'] === 'logistic';
+        $rows = [];
+        foreach ($fit['coefficients'] as $term => $c) {
+            $label = $labels[$term] ?? $term;
+            foreach ($r['categorical'] ?? [] as $cat) {
+                if ($term !== $cat && str_starts_with($term, $cat)) {
+                    // Treatment-coded dummy: "<variable label>: <level>".
+                    $label = ($labels[$cat] ?? $cat) . ': ' . substr($term, strlen($cat));
+                }
+            }
+            $rows[] = ['term' => $label, 'b' => self::f($c['b'], 3), 'se' => self::f($c['se'], 3),
+                'ci' => '[' . self::f($c['cilow'], 3) . ', ' . self::f($c['cihigh'], 3) . ']', 'p' => self::p($c['p']),
+                'beta' => $logistic ? self::f($c['or'], 3) : (isset($c['beta']) ? self::f($c['beta'], 3) : ''),
+                'orci' => $logistic ? '[' . self::f($c['orlow'], 3) . ', ' . self::f($c['orhigh'], 3) . ']' : null,
+                'vif' => isset($fit['vif'][$term]) ? self::f($fit['vif'][$term], 2) : ''];
+        }
+        $out = ['logistic' => $logistic, 'rows' => $rows, 'n' => $fit['n'], 'ntotal' => $fit['ntotal'],
+            'excluded' => $fit['excluded'], 'warnings' => array_map(
+                static fn($w) => get_string('analysis:warning:' . $w, 'block_catquiz_statistics'),
+                $fit['warnings'] ?? []
+            )];
+        if ($logistic) {
+            $out['fitline'] = 'McFadden R² = ' . self::f($fit['mcfadden'], 3)
+                . ' · Nagelkerke R² = ' . self::f($fit['nagelkerke'], 3)
+                . ' · AIC = ' . self::f($fit['aic'], 1) . ' · BIC = ' . self::f($fit['bic'], 1);
+        } else {
+            $out['fitline'] = 'R² = ' . self::f($fit['r2'], 3) . ' · adj. R² = ' . self::f($fit['adjr2'], 3)
+                . ' · AIC = ' . self::f($fit['aic'], 1) . ' · BIC = ' . self::f($fit['bic'], 1);
+            $out['diagnostics'] = get_string('analysis:diagnostics', 'block_catquiz_statistics', (object) [
+                'min' => self::f($fit['residuals']['min']), 'median' => self::f($fit['residuals']['median']),
+                'max' => self::f($fit['residuals']['max']), 'cook' => $fit['cookover']]);
+        }
+        if ($r['sequence']) {
+            $out['sequence'] = array_map(static fn($m) => [
+                'step' => $m['step'],
+                'predictors' => implode(', ', array_map(static fn($p) => $labels[$p] ?? $p, $m['predictors'])),
+                'r2' => self::f($logistic ? $m['fit']['mcfadden'] : $m['fit']['r2'], 3),
+                'change' => isset($m['change'])
+                    ? 'Δ = ' . self::f($m['change']['deltar2'], 3) . ', p ' . self::p($m['change']['p']) : '',
+            ], $r['sequence']['models']);
+        }
+        return $out;
+    }
+
+    /**
+     * Path-model result for the template.
+     *
+     * @param array $r Runner result.
+     * @param array $labels column => label
+     * @return array
+     */
+    private function export_path(array $r, array $labels): array {
+        if (!$r['ok']) {
+            return ['error' => $r['error']];
+        }
+        $res = $r['result'];
+        $paths = [];
+        foreach ($res['equations'] as $to => $eq) {
+            foreach ($eq['paths'] as $from => $c) {
+                $paths[] = ['from' => $labels[$from] ?? $from, 'to' => $labels[$to] ?? $to, 'b' => self::f($c['b'], 3),
+                    'beta' => isset($c['beta']) ? self::f($c['beta'], 3) : '', 'se' => self::f($c['se'], 3),
+                    'ci' => '[' . self::f($c['cilow'], 3) . ', ' . self::f($c['cihigh'], 3) . ']', 'p' => self::p($c['p'])];
+            }
+        }
+        $effects = [];
+        foreach ($res['effects'] as $e) {
+            if (empty($e['routes'])) {
+                continue;
+            }
+            $effects[] = ['from' => $labels[$e['from']] ?? $e['from'], 'to' => $labels[$e['to']] ?? $e['to'],
+                'direct' => $e['hasdirect'] ? self::f($e['direct'], 3) : '–',
+                'indirect' => self::f($e['indirect'], 3), 'total' => self::f($e['total'], 3),
+                'bootci' => isset($e['bootcilow']) && $e['bootcilow'] !== null
+                    ? '[' . self::f($e['bootcilow'], 3) . ', ' . self::f($e['bootcihigh'], 3) . ']' : '–'];
+        }
+        return [
+            'svg' => path_diagram::svg($r['equations'], $res, $labels),
+            'paths' => $paths,
+            'effects' => $effects,
+            'r2' => array_map(
+                static fn($k, $v) => ['variable' => $labels[$k] ?? $k, 'r2' => self::f($v['r2'], 3)],
+                array_keys($res['equations']),
+                $res['equations']
+            ),
+            'n' => $res['n'], 'ntotal' => $res['ntotal'], 'excluded' => $res['excluded'],
+            'bootstrapinfo' => $res['bootstrap'] ? get_string(
+                'analysis:bootstrapinfo',
+                'block_catquiz_statistics',
+                (object) ['b' => $res['bootstrap'], 'seed' => $res['seed']]
+            ) : null,
+            'warnings' => array_map(
+                static fn($w) => get_string('analysis:warning:' . $w, 'block_catquiz_statistics'),
+                $res['warnings']
+            ),
+        ];
+    }
+
+    /**
+     * Format a number with fixed decimals (empty for null).
+     *
+     * @param float|int|null $v Value.
+     * @param int $decimals Decimals.
+     * @return string
+     */
+    private static function f(float|int|null $v, int $decimals = 2): string {
+        return $v === null ? '' : format_float((float) $v, $decimals);
+    }
+
+    /**
+     * Format a p-value.
+     *
+     * @param float $p p-value.
+     * @return string
+     */
+    private static function p(float $p): string {
+        return $p < 0.001 ? '< ' . format_float(0.001, 3) : '= ' . format_float($p, 3);
     }
 
     /**

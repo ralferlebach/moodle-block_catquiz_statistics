@@ -6,6 +6,23 @@ versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.5.0] — Build 2026100200 (02.10.2026)
+
+### Added (Build 2026100200) — Issue #8, Analyse-Arbeitsbereich
+- `analytics.php?workspace=analysis` (Recht `viewanalyses`): Deskription aller Modellvariablen (numerisch: N, fehlend,
+  M, SD, Md, IQR, Min, Max; kategorial: Häufigkeiten), Regressionsaufbau (Outcome, Prädiktoren, Kovariaten;
+  linear/logistisch/automatisch; optional verschachtelte Sequenz M1 Kovariaten → M2 alle), Pfadmodell in
+  lavaan-ähnlicher Syntax (`y ~ a + b`) mit Pfaddiagramm (SVG, Ebenenlayout, Bogenkanten über Zwischenebenen),
+  Effekttabelle (direkt/indirekt/total, „–“ wenn kein direkter Pfad spezifiziert) und Bootstrap-KI.
+- Jede Ergebnisanzeige nennt N vor/nach listenweisem Ausschluss, Modellversion, Plugin-Build und Zeitpunkt;
+  Hinweis „statistische Zusammenhänge, keine kausalen Effekte“; Warnungen (N < 50, Nichtkonvergenz, Separation).
+- `research\analysis_runner` (Fehler als Meldung, nie als Exception zur Seite; Grenze 5000 Personen /
+  2000 Bootstrap-Replikationen im Browser), `research\path_diagram`.
+- `export.php`: Forschungsexport als ZIP (POST + sesskey; `export`; Klartext nur mit `exportidentified`).
+
+### Changed (Build 2026100200)
+- Testklassen in namespace-konforme Verzeichnisse verschoben (`tests/analytics/{evaluation,identity,provider,semantic}`).
+
 ## [0.5.0] — Build 2026100101 (01.10.2026)
 
 ### Added (Build 2026100101) — Issue #8, Statistik-Engine und Forschungsdatenexport
